@@ -34,7 +34,7 @@ export interface EdrionRuntimeInfo {
  * execution context and runtime metrics.
  */
 export class Edrion {
-    private static readonly VERSION: string = '0.9.0';
+    private static readonly VERSION: string = '0.10.0';
 
     private readonly options: NormalizedEdrionOptions;
     private readonly backendRegistry: BackendRegistry;

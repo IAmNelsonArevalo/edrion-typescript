@@ -805,6 +805,35 @@ export class Tensor {
     }
 
     /**
+     * Scales the currently accumulated gradient in place.
+     * Used by numerical-safety utilities such as global-norm clipping.
+     */
+    public scaleGradient(factor: number): void {
+        if (!Number.isFinite(factor) || factor < 0) {
+            throw new InvalidGradientError(
+                `Gradient scale factor must be a finite number greater than or equal to zero. Received ${factor}.`,
+            );
+        }
+
+        const gradient: Float32Array | undefined = this.gradientStorage;
+
+        if (gradient === undefined) {
+            return;
+        }
+
+        for (let index: number = 0; index < gradient.length; index += 1) {
+            const value: number = readArrayValue(gradient, index);
+            const scaledValue: number = value * factor;
+
+            if (!Number.isFinite(scaledValue)) {
+                throw new InvalidGradientError(`Scaled gradient became non-finite at flat offset ${index}.`);
+            }
+
+            gradient[index] = scaledValue;
+        }
+    }
+
+    /**
      * Executes reverse-mode automatic differentiation.
      *
      * A scalar output defaults to an upstream gradient of 1.

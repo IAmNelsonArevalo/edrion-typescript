@@ -18,6 +18,7 @@ export * from './metrics';
 export * from './nn';
 export * from './optim';
 export * from './runtime';
+export * from './stability';
 export * from './tensor';
 
 export * from './tokenizer';

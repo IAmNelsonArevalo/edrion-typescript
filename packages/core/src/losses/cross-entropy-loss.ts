@@ -2,6 +2,8 @@ import { Loss } from '@core/losses/loss';
 import { LossShapeError, LossTargetError } from '@core/losses/loss.errors';
 import type { TensorShape } from '@core/tensor/shape';
 import { tensorShapesEqual } from '@core/tensor/shape';
+import { createDetachedAxisMax } from '@core/stability/stable-reductions';
+import { assertFiniteTensor } from '@core/stability/numerical-validation';
 import { Tensor } from '@core/tensor/tensor';
 
 /**
@@ -15,7 +17,7 @@ import { Tensor } from '@core/tensor/tensor';
  * - logits [batch, classes] -> target [batch]
  * - logits [batch, sequence, classes] -> target [batch, sequence]
  *
- * Numerical max-subtraction stabilization is introduced in FEATURE-009.
+ * Uses max-subtracted log-sum-exp for numerical stability.
  */
 export class CrossEntropyLoss extends Loss {
     public override forward(logits: Tensor, target: Tensor): Tensor {
@@ -37,12 +39,15 @@ export class CrossEntropyLoss extends Loss {
             throw new LossTargetError('CrossEntropyLoss class targets must not require gradients.');
         }
 
+        assertFiniteTensor(logits, 'Cross entropy logits');
+
         const oneHot: Tensor = createOneHotTarget(target, logitsShape, classCount, logits.backend);
 
-        const exponentials: Tensor = logits.exp();
-        const denominator: Tensor = exponentials.sum(-1, true);
-        const probabilities: Tensor = exponentials.div(denominator);
-        const logProbabilities: Tensor = probabilities.log();
+        const maxima: Tensor = createDetachedAxisMax(logits, -1);
+        const shifted: Tensor = logits.sub(maxima);
+        const exponentials: Tensor = shifted.exp();
+        const logSumExp: Tensor = exponentials.sum(-1, true).log().add(maxima);
+        const logProbabilities: Tensor = logits.sub(logSumExp);
 
         return logProbabilities.mul(oneHot).sum(-1).neg().mean();
     }
