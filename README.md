@@ -4,7 +4,7 @@
 
 ## TypeScript
 
-### AI framework and NestJS integration for the Edrion ecosystem
+### AI runtime and framework integrations for the Edrion ecosystem
 
 **Building intelligence from the core.**
 
@@ -16,13 +16,13 @@
 
 **Edrion** is an artificial intelligence ecosystem focused on building the foundations required to create, train, evaluate, specialize and execute intelligent models.
 
-The project is designed around the idea that modern artificial intelligence should not be limited to a single programming language or runtime.
+The project is designed around the idea that modern artificial intelligence should not be limited to a single programming language, framework or runtime.
 
-`edrion-typescript` brings the Edrion ecosystem to TypeScript, providing a strongly typed foundation designed to evolve toward:
+`edrion-typescript` brings the Edrion ecosystem to TypeScript and provides a strongly typed, framework-independent AI runtime designed to evolve toward:
 
-- Deep Learning
-- Tensor operations
+- Tensor computation
 - Automatic differentiation
+- Deep Learning
 - Neural Networks
 - Transformers
 - Tokenization
@@ -35,7 +35,7 @@ The project is designed around the idea that modern artificial intelligence shou
 - WebAssembly
 - WebGPU
 
-NestJS is the first officially supported framework integration.
+NestJS is the first officially supported framework integration, while the core runtime remains independent from NestJS.
 
 ---
 
@@ -62,35 +62,71 @@ Edrion
     └── Multimodal Applications
 ```
 
-The long-term goal is to allow the different Edrion runtimes to share concepts, model formats and AI capabilities while taking advantage of the strengths of each language and platform.
+The long-term objective is to allow different Edrion runtimes to share concepts, artifacts and model capabilities while taking advantage of the strengths of each ecosystem.
 
 ---
 
-## Current Status
+# Current Status
 
 Current version:
 
 ```text
-v0.1.0
+v0.2.0
 ```
 
 Current milestone:
 
 ```text
-FEATURE-000 — NestJS Foundation
+FEATURE-001 — Core Runtime + Backend Abstraction
 ```
 
-`v0.1.0` establishes the architectural and runtime foundation of Edrion TypeScript.
+Completed milestones:
 
-It does **not yet contain the tensor engine, neural networks or training system**.
+```text
+v0.1.0
+FEATURE-000 — NestJS Foundation ✅
 
-Those capabilities are introduced progressively through future features.
+v0.2.0
+FEATURE-001 — Core Runtime + Backend Abstraction ✅
+```
+
+The project now contains the runtime and backend infrastructure required before introducing Tensor computation.
 
 ---
 
-## Why TypeScript?
+# Current Capabilities
 
-TypeScript gives Edrion access to an enormous ecosystem spanning:
+`v0.2.0` provides:
+
+- Framework-independent Edrion runtime
+- NestJS integration
+- Synchronous NestJS configuration
+- Asynchronous NestJS configuration
+- Dependency Injection
+- Runtime lifecycle management
+- Runtime state
+- Runtime identifiers
+- Execution context
+- Runtime metadata
+- Runtime metrics
+- Backend abstraction
+- Backend registry
+- CPU backend lifecycle
+- Custom backend support
+- Graceful shutdown
+- Failure tracking
+- TypeScript aliases
+- ESM build
+- CommonJS build
+- Type declaration generation
+- Unit testing
+- Strict TypeScript validation
+
+---
+
+# Why TypeScript?
+
+TypeScript provides Edrion access to an ecosystem spanning backend, frontend and browser environments.
 
 ```text
 Backend
@@ -104,22 +140,20 @@ Frontend
 ├── Next.js
 └── Web Workers
 
-Future AI execution
+Future AI Execution
 ├── WebAssembly
 └── WebGPU
 ```
 
-This creates interesting possibilities for Edrion, including running trained models directly inside JavaScript environments and, eventually, inside web browsers.
+This creates the possibility of using Edrion not only as a server-side AI framework but eventually as an AI runtime capable of operating inside browser environments.
 
 ---
 
-## Design Principles
+# Design Principles
 
-Edrion TypeScript follows several architectural principles.
+## Framework Independence
 
-### Framework Independence
-
-The Edrion core must never depend directly on NestJS.
+The core of Edrion must remain independent from application frameworks.
 
 ```text
 NestJS
@@ -134,42 +168,72 @@ Edrion Runtime
 Edrion Core
 ```
 
-This allows future integrations to reuse the same runtime:
+Future integrations should consume the same runtime:
 
 ```text
-                   Edrion Core
-                       │
-         ┌─────────────┼─────────────┐
-         │             │             │
-       NestJS        Express       Node.js
-                                      │
-                                   GraphQL
+                  Edrion Core
+                      │
+         ┌────────────┼────────────┐
+         │            │            │
+       NestJS       Express      Node.js
+                                   │
+                                GraphQL
 ```
 
+NestJS is an adapter around Edrion, not the Edrion core itself.
+
 ---
 
-### Strong Typing
+## Backend Independence
 
-Edrion is built using strict TypeScript configuration.
+Computational execution is also separated from the runtime.
 
-The project aims to avoid unsafe runtime behavior by relying heavily on:
+```text
+Edrion Runtime
+      │
+      ▼
+Backend Registry
+      │
+ ┌────┼─────────┐
+ │    │         │
+ ▼    ▼         ▼
+CPU   WASM    WebGPU
+✅   Future    Future
+```
+
+The runtime does not need to know the internal implementation of each backend.
+
+Backends implement a common contract and are resolved through the backend registry.
+
+---
+
+## Strong Typing
+
+Edrion uses strict TypeScript configuration.
+
+The project relies on:
 
 - explicit interfaces
-- strong type contracts
-- strict compiler settings
-- validated configuration
+- strict compiler rules
+- type-safe configuration
+- well-defined contracts
 - predictable public APIs
+- type declaration generation
 
 ---
 
-### Modularity
+## Modularity
 
-Each AI capability will live inside an isolated module.
+AI functionality will be separated into dedicated modules.
 
-Future core structure:
+The expected core evolution is:
 
 ```text
 src/core/
+├── backend/
+├── config/
+├── metrics/
+├── runtime/
 ├── tensor/
 ├── autograd/
 ├── nn/
@@ -179,64 +243,47 @@ src/core/
 ├── training/
 ├── inference/
 ├── generation/
-├── serialization/
-└── metrics/
+└── serialization/
 ```
 
-This prevents responsibilities from becoming tightly coupled as the framework grows.
+Each area should remain focused on a single responsibility.
 
 ---
 
-### Observability First
+## Observability First
 
-Observability is considered part of the Edrion architecture from the beginning.
+Observability is part of the architecture from the beginning.
 
-Future versions will expose information such as:
+Current runtime metrics include:
+
+- initialization count
+- shutdown count
+- failure count
+- initialization timestamp
+- shutdown timestamp
+- runtime uptime
+
+Future versions will expand observability to include:
 
 - tensor operations
-- model parameters
+- parameter counts
 - layers
+- neurons
+- dimensions
+- embeddings
+- attention heads
 - training metrics
 - inference metrics
 - token usage
 - execution duration
 - memory usage
-- model dimensions
-- attention heads
-- embeddings
 - checkpoints
 
-Observability should not be introduced as an afterthought.
+Observability is considered a core feature rather than an optional late-stage addition.
 
 ---
 
-### Extensibility
-
-The runtime is designed to support multiple computational backends.
-
-The first backend identifier is:
-
-```text
-cpu
-```
-
-The architecture will eventually support:
-
-```text
-CPU
- │
- ├── Native TypeScript
- │
- ├── Worker Threads
- │
- ├── WebAssembly
- │
- └── WebGPU
-```
-
----
-
-## Installation
+# Installation
 
 Using pnpm:
 
@@ -258,9 +305,9 @@ yarn add edrion-typescript
 
 ---
 
-## NestJS Requirements
+# NestJS Requirements
 
-When using Edrion with NestJS, your application should have:
+When using Edrion with NestJS:
 
 ```bash
 pnpm add \
@@ -270,136 +317,139 @@ pnpm add \
   rxjs
 ```
 
-These dependencies are declared as peer dependencies by Edrion.
+These packages are peer dependencies of `edrion-typescript`.
 
 ---
 
 # NestJS Integration
 
-## Register Edrion
-
-Import `EdrionModule` into your NestJS application:
+Register Edrion inside your application:
 
 ```ts
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  EdrionModule,
-} from 'edrion-typescript';
+import { EdrionModule } from 'edrion-typescript';
 
 @Module({
-  imports: [
-    EdrionModule.forRoot({
-      backend: 'cpu',
+    imports: [
+        EdrionModule.forRoot({
+            backend: 'cpu',
 
-      observability: {
-        enabled: true,
-      },
-    }),
-  ],
+            observability: {
+                enabled: true,
+            },
+
+            runtime: {
+                metadata: {
+                    application: 'my-application',
+
+                    environment: 'production',
+                },
+            },
+        }),
+    ],
 })
 export class AppModule {}
 ```
 
-This creates a single Edrion runtime managed by NestJS Dependency Injection.
+NestJS automatically initializes the Edrion runtime when the module starts.
 
 ---
 
-## Inject EdrionService
+# Injecting EdrionService
 
 ```ts
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
-import {
-  EdrionService,
-} from 'edrion-typescript';
+import { EdrionService } from 'edrion-typescript';
 
 @Injectable()
 export class AIService {
-  constructor(
-    private readonly edrion:
-      EdrionService,
-  ) {}
+    constructor(private readonly edrion: EdrionService) {}
 
-  getRuntimeInfo() {
-    return this.edrion.getRuntimeInfo();
-  }
+    getRuntimeInfo() {
+        return this.edrion.getRuntimeInfo();
+    }
 }
 ```
 
-Example result:
+---
 
-```json
-{
-  "name": "edrion-typescript",
-  "version": "0.1.0",
-  "backend": "cpu",
-  "observabilityEnabled": true
-}
+# Runtime Lifecycle in NestJS
+
+NestJS lifecycle events are connected to Edrion automatically.
+
+```text
+NestJS startup
+      │
+      ▼
+OnModuleInit
+      │
+      ▼
+Edrion.initialize()
+      │
+      ▼
+Backend.initialize()
+      │
+      ▼
+READY
+```
+
+During shutdown:
+
+```text
+NestJS shutdown
+      │
+      ▼
+OnModuleDestroy
+      │
+      ▼
+Edrion.shutdown()
+      │
+      ▼
+Backend.dispose()
+      │
+      ▼
+STOPPED
 ```
 
 ---
 
 # Async NestJS Configuration
 
-Edrion also supports asynchronous configuration.
-
-This is useful when the configuration depends on:
-
-- environment variables
-- NestJS ConfigModule
-- secrets
-- remote configuration
-- application-specific providers
-
-Example:
+Edrion supports asynchronous configuration.
 
 ```ts
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  ConfigModule,
-  ConfigService,
-} from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import {
-  EdrionModule,
-} from 'edrion-typescript';
+import { EdrionModule } from 'edrion-typescript';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot(),
+    imports: [
+        ConfigModule.forRoot(),
 
-    EdrionModule.forRootAsync({
-      imports: [
-        ConfigModule,
-      ],
+        EdrionModule.forRootAsync({
+            imports: [ConfigModule],
 
-      inject: [
-        ConfigService,
-      ],
+            inject: [ConfigService],
 
-      useFactory: (
-        configService: ConfigService,
-      ) => ({
-        backend: 'cpu',
+            useFactory: (configService: ConfigService) => ({
+                backend: 'cpu',
 
-        observability: {
-          enabled:
-            configService.get<boolean>(
-              'EDRION_OBSERVABILITY',
-              true,
-            ),
-        },
-      }),
-    }),
-  ],
+                observability: {
+                    enabled: configService.get<boolean>('EDRION_OBSERVABILITY', true),
+                },
+
+                runtime: {
+                    metadata: {
+                        application: 'my-application',
+                    },
+                },
+            }),
+        }),
+    ],
 })
 export class AppModule {}
 ```
@@ -408,110 +458,310 @@ export class AppModule {}
 
 # Framework-Independent Usage
 
-NestJS is an integration layer.
-
-The core Edrion runtime can be used directly:
+Edrion does not require NestJS.
 
 ```ts
-import {
-  Edrion,
-} from 'edrion-typescript';
+import { Edrion } from 'edrion-typescript';
 
-const edrion =
-  new Edrion({
+const edrion = new Edrion({
     backend: 'cpu',
 
     observability: {
-      enabled: true,
+        enabled: true,
     },
-  });
 
-console.log(
-  edrion.getRuntimeInfo(),
-);
+    runtime: {
+        metadata: {
+            application: 'standalone-example',
+        },
+    },
+});
+
+await edrion.initialize();
+
+console.log(edrion.getRuntimeInfo());
+
+await edrion.shutdown();
 ```
-
-This architecture is intentional.
-
-Future Express and Node.js integrations will use the same `Edrion` runtime.
 
 ---
 
-# Runtime Configuration
+# Runtime Information
 
-Current configuration:
+After initialization:
 
 ```ts
-interface EdrionOptions {
-  backend?: 'cpu';
-
-  observability?: {
-    enabled?: boolean;
-  };
-}
+const info = edrion.getRuntimeInfo();
 ```
 
 Example:
 
-```ts
-const edrion =
-  new Edrion({
-    backend: 'cpu',
-
-    observability: {
-      enabled: false,
+```json
+{
+    "name": "edrion-typescript",
+    "version": "0.2.0",
+    "runtimeId": "c1edb45a-...",
+    "status": "ready",
+    "backend": {
+        "name": "cpu",
+        "device": "cpu",
+        "initialized": true
     },
-  });
+    "observabilityEnabled": true,
+    "createdAt": "2026-10-21T...",
+    "metrics": {
+        "initializationCount": 1,
+        "shutdownCount": 0,
+        "failureCount": 0,
+        "lastInitializedAt": "2026-10-21T...",
+        "uptimeMs": 25
+    }
+}
 ```
 
-Default configuration:
+---
+
+# Runtime States
+
+The Edrion runtime currently supports:
+
+```text
+created
+   │
+   ▼
+initializing
+   │
+   ▼
+ready
+   │
+   ▼
+stopping
+   │
+   ▼
+stopped
+```
+
+If initialization or shutdown fails:
+
+```text
+failed
+```
+
+Runtime transitions are validated internally to avoid invalid lifecycle states.
+
+---
+
+# Backend System
+
+Every Edrion backend implements the same contract.
+
+```ts
+interface EdrionBackend {
+    readonly name: string;
+
+    initialize(context: BackendInitializationContext): Promise<void>;
+
+    dispose(): Promise<void>;
+
+    isInitialized(): boolean;
+
+    getInfo(): EdrionBackendInfo;
+}
+```
+
+The default registry currently contains:
+
+```text
+cpu
+```
+
+---
+
+# Custom Backends
+
+Applications may provide their own backend registry.
+
+```ts
+import { BackendRegistry, Edrion, type EdrionBackend } from 'edrion-typescript';
+
+class CustomBackend implements EdrionBackend {
+    readonly name = 'custom';
+
+    private initialized = false;
+
+    async initialize() {
+        this.initialized = true;
+    }
+
+    async dispose() {
+        this.initialized = false;
+    }
+
+    isInitialized() {
+        return this.initialized;
+    }
+
+    getInfo() {
+        return {
+            name: this.name,
+
+            device: 'custom-device',
+
+            initialized: this.initialized,
+        };
+    }
+}
+
+const registry = new BackendRegistry();
+
+registry.register('custom', () => new CustomBackend());
+
+const edrion = new Edrion(
+    {
+        backend: 'custom',
+    },
+
+    {
+        backendRegistry: registry,
+    },
+);
+
+await edrion.initialize();
+```
+
+This architecture allows future computational backends without coupling the runtime directly to their implementations.
+
+---
+
+# Runtime Metrics
+
+Runtime metrics can be accessed with:
+
+```ts
+const metrics = edrion.getMetrics();
+```
+
+Current metrics:
 
 ```ts
 {
-  backend: 'cpu',
+    initializationCount: number;
+    shutdownCount: number;
+    failureCount: number;
 
-  observability: {
-    enabled: true,
-  },
+    lastInitializedAt: Date | undefined;
+
+    lastShutdownAt: Date | undefined;
+
+    uptimeMs: number;
 }
 ```
+
+This system will later be expanded to track tensor, model, training and inference activity.
+
+---
+
+# Import Architecture
+
+The source code uses internal aliases.
+
+```ts
+import { Edrion } from '@core';
+
+import { BackendRegistry } from '@core/backend';
+
+import { EdrionService } from '@nest';
+```
+
+This avoids imports such as:
+
+```ts
+../../../core/runtime/edrion
+```
+
+and keeps imports maintainable as Edrion grows.
+
+The primary aliases are:
+
+```text
+@core
+@core/*
+
+@nest
+@nest/*
+
+@test/*
+```
+
+Relative imports are still appropriate inside a single module.
 
 ---
 
 # Public API
 
-The package currently exports:
+Consumers should always use the public package entrypoint:
 
 ```ts
-import {
-  Edrion,
-  EdrionModule,
-  EdrionService,
-
-  EDRION_INSTANCE,
-  EDRION_OPTIONS,
-
-  normalizeEdrionOptions,
-  DEFAULT_EDRION_OPTIONS,
-} from 'edrion-typescript';
+import { Edrion, BackendRegistry, CPUBackend, EdrionModule, EdrionService, EDRION_INSTANCE, EDRION_OPTIONS } from 'edrion-typescript';
 ```
 
-Type definitions are exported as well:
+Types are also exported:
 
 ```ts
 import type {
-  EdrionOptions,
-  EdrionBackend,
-  EdrionRuntimeInfo,
-  EdrionModuleOptions,
-  EdrionModuleAsyncOptions,
-  EdrionOptionsFactory,
+    EdrionOptions,
+    EdrionBackend,
+    EdrionBackendInfo,
+    EdrionRuntimeInfo,
+    EdrionRuntimeStatus,
+    EdrionRuntimeMetricsSnapshot,
+    EdrionExecutionContext,
+    EdrionModuleOptions,
+    EdrionModuleAsyncOptions,
 } from 'edrion-typescript';
 ```
 
-Consumers should import everything through the public package entry point.
+Consumers should not import internal source files directly.
 
-Avoid importing internal files directly.
+---
+
+# Current Architecture
+
+```text
+┌─────────────────────────────────────┐
+│         NestJS Application          │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│            EdrionModule             │
+│            EdrionService            │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│            Edrion Runtime           │
+│                                     │
+│ Runtime State                       │
+│ Execution Context                   │
+│ Runtime Metrics                     │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│           Backend Registry          │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+             ┌──────────┐
+             │   CPU    │
+             │ Backend  │
+             └────┬─────┘
+                  │
+                  ▼
+              Tensor Core
+              FEATURE-002
+```
 
 ---
 
@@ -522,21 +772,31 @@ edrion-typescript/
 │
 ├── src/
 │   ├── core/
+│   │   ├── backend/
+│   │   │   ├── cpu/
+│   │   │   ├── backend.interface.ts
+│   │   │   ├── backend.registry.ts
+│   │   │   ├── backend.types.ts
+│   │   │   └── index.ts
+│   │   │
 │   │   ├── config/
 │   │   │   └── edrion-options.ts
 │   │   │
+│   │   ├── metrics/
+│   │   │   ├── runtime-metrics.ts
+│   │   │   └── index.ts
+│   │   │
 │   │   ├── runtime/
-│   │   │   └── edrion.ts
+│   │   │   ├── edrion.ts
+│   │   │   ├── execution-context.ts
+│   │   │   ├── runtime-state.ts
+│   │   │   └── index.ts
 │   │   │
 │   │   └── index.ts
 │   │
 │   ├── nest/
 │   │   ├── constants/
-│   │   │   └── edrion.constants.ts
-│   │   │
 │   │   ├── interfaces/
-│   │   │   └── edrion-module-options.interface.ts
-│   │   │
 │   │   ├── edrion.module.ts
 │   │   ├── edrion.service.ts
 │   │   └── index.ts
@@ -544,67 +804,26 @@ edrion-typescript/
 │   └── index.ts
 │
 ├── test/
+│   ├── backend/
 │   ├── core/
-│   │   └── edrion.spec.ts
-│   │
 │   └── nest/
-│       └── edrion.service.spec.ts
 │
 ├── LICENSE
+├── README.md
 ├── package.json
 ├── tsconfig.json
 ├── tsconfig.build.json
 ├── tsup.config.ts
 ├── vitest.config.ts
 ├── eslint.config.mjs
-├── prettier.config.mjs
-└── README.md
+└── prettier.config.mjs
 ```
-
----
-
-# Architecture
-
-The initial architecture intentionally separates the AI runtime from framework-specific integrations.
-
-```text
-┌──────────────────────────────┐
-│      NestJS Application      │
-└───────────────┬──────────────┘
-                │
-                ▼
-┌──────────────────────────────┐
-│        EdrionModule          │
-│        EdrionService         │
-└───────────────┬──────────────┘
-                │
-                ▼
-┌──────────────────────────────┐
-│           Edrion             │
-│          Runtime             │
-└───────────────┬──────────────┘
-                │
-                ▼
-┌──────────────────────────────┐
-│         Edrion Core          │
-│                              │
-│ Tensor                       │
-│ Autograd                     │
-│ Neural Networks              │
-│ Optimizers                   │
-│ Transformers                 │
-│ Training                     │
-│ Inference                    │
-└──────────────────────────────┘
-```
-
-The bottom layers will be progressively implemented in future versions.
 
 ---
 
 # Development
 
-Clone the repository:
+Clone:
 
 ```bash
 git clone https://github.com/IAmNelsonArevalo/edrion-typescript.git
@@ -630,21 +849,17 @@ pnpm install
 pnpm typecheck
 ```
 
----
-
 ## Tests
 
 ```bash
 pnpm test
 ```
 
-Watch mode:
+Watch:
 
 ```bash
 pnpm test:watch
 ```
-
----
 
 ## Lint
 
@@ -658,21 +873,11 @@ Automatic fixes:
 pnpm lint:fix
 ```
 
----
-
 ## Format
 
 ```bash
 pnpm format
 ```
-
-Validate formatting:
-
-```bash
-pnpm format:check
-```
-
----
 
 ## Build
 
@@ -680,96 +885,77 @@ pnpm format:check
 pnpm build
 ```
 
-The package generates:
-
-```text
-dist/
-├── index.js
-├── index.cjs
-├── index.d.ts
-└── source maps
-```
-
-Edrion supports both:
-
-```text
-ES Modules
-CommonJS
-```
-
-as well as generated TypeScript declaration files.
-
----
-
-# Quality Gate
-
-Before merging a feature or publishing a release:
+## Complete Quality Gate
 
 ```bash
 pnpm check
 ```
 
-This executes:
+This validates:
 
 ```text
-TypeScript validation
-        ↓
+TypeScript
+    ↓
 ESLint
-        ↓
-Tests
-        ↓
-Production build
+    ↓
+Vitest
+    ↓
+Production Build
 ```
 
-A feature should not be considered complete unless the complete quality gate passes.
+A feature should not be merged until the complete quality gate passes.
 
 ---
 
-# Version Roadmap
+# Roadmap
 
 ## v0.1.0 — NestJS Foundation
 
 ```text
-FEATURE-000
+FEATURE-000 ✅
 ```
 
-Includes:
+Introduced:
 
 - TypeScript project foundation
 - ESM
 - CommonJS
-- declaration files
+- Declaration files
 - Edrion runtime
-- runtime configuration
-- observability configuration
-- CPU backend identifier
+- Runtime configuration
 - NestJS module
 - NestJS service
-- synchronous configuration
-- asynchronous configuration
+- `forRoot`
+- `forRootAsync`
 - Dependency Injection
-- tests
-- linting
-- formatting
-- production build
+- Observability configuration
+- Tests
+- Build tooling
 
 ---
 
 ## v0.2.0 — Core Runtime + Backend Abstraction
 
 ```text
-FEATURE-001
+FEATURE-001 ✅
 ```
 
-Planned:
+Introduced:
 
-- backend interface
-- backend registry
-- backend lifecycle
-- CPU backend foundation
-- runtime state
-- execution context
-- runtime metrics foundation
+- Backend contract
+- Backend registry
+- CPU backend
+- Custom backends
+- Runtime state
+- Runtime lifecycle
+- Execution context
+- Runtime ID
+- Runtime metadata
+- Runtime metrics
+- Failure tracking
+- Graceful shutdown
+- NestJS lifecycle integration
+- Source aliases
 
 ---
 
@@ -782,14 +968,17 @@ FEATURE-002
 Planned:
 
 - Tensor
-- shape
-- strides
-- dtype
+- Shape
+- Strides
+- DType
 - Float32Array storage
-- indexing
-- reshape
-- tensor creation
-- tensor validation
+- Scalar tensors
+- Tensor creation
+- Index calculation
+- Reshape
+- Clone
+- Tensor validation
+- Backend integration
 
 ---
 
@@ -801,12 +990,12 @@ FEATURE-003
 
 Planned:
 
-- mathematical operations
-- computational graph
-- gradients
-- backward propagation
+- Tensor mathematical operations
+- Computational graph
+- Gradient tracking
+- Backward propagation
+- Gradient accumulation
 - zeroGrad
-- gradient accumulation
 
 ---
 
@@ -839,7 +1028,7 @@ Planned:
 - MSE
 - SGD
 - Adam
-- optimizer state
+- optimizer states
 - numerical validation
 
 ---
@@ -854,7 +1043,7 @@ Planned:
 
 - Attention
 - Multi-Head Attention
-- causal masking
+- Causal Mask
 - Feed Forward Networks
 - Transformer Blocks
 
@@ -868,12 +1057,12 @@ FEATURE-007
 
 Planned:
 
-- vocabulary
-- tokenizer
+- Vocabulary
+- Tokenizer
 - BPE
-- encode
-- decode
-- autoregressive generation
+- Encoding
+- Decoding
+- Autoregressive generation
 
 ---
 
@@ -886,13 +1075,13 @@ FEATURE-008
 Planned:
 
 - Trainer
-- epochs
-- metrics
-- seeds
-- checkpoints
-- model serialization
-- model loading
-- artifact persistence
+- Epochs
+- Seeds
+- Training metrics
+- Model serialization
+- Checkpoints
+- Model loading
+- Artifact persistence
 
 ---
 
@@ -902,70 +1091,61 @@ Planned:
 FEATURE-009
 ```
 
-Target:
+Target architecture:
 
 ```text
 Tensor
-  ↓
+   ↓
 Autograd
-  ↓
+   ↓
 Neural Networks
-  ↓
+   ↓
 Transformer
-  ↓
+   ↓
 Tokenizer
-  ↓
+   ↓
 Training
-  ↓
+   ↓
 Serialization
-  ↓
+   ↓
 Inference
-  ↓
+   ↓
 NestJS
 ```
 
-At this point, Edrion TypeScript should provide a complete initial AI framework lifecycle.
-
 ---
 
-# Future Integrations
+# Future
 
-After the first production foundation, Edrion TypeScript is expected to expand toward:
+Beyond `v1.0.0`, Edrion TypeScript is expected to expand toward:
 
-```text
-Express Adapter
-
-Node.js Adapter
-
-GraphQL Integration
-
-Conversation Engine
-
-Stability Lab
-
-WebAssembly Backend
-
-WebGPU Backend
-
-Edrion Go Artifact Compatibility
-
-Multimodal Foundation
-```
+- Conversation Engine
+- Stability Lab
+- Express Adapter
+- Node.js Adapter
+- GraphQL Integration
+- WebAssembly backend
+- WebGPU backend
+- Edrion Go artifact compatibility
+- Multimodal AI foundations
+- Image models
+- Audio models
+- Video models
 
 ---
 
 # Long-Term Vision
 
-Edrion is not intended to become only another wrapper around an existing AI framework.
+Edrion is not intended to become only a wrapper around existing AI frameworks.
 
-The long-term objective is to build its own reusable foundations for:
+The long-term objective is to build reusable foundations for:
 
 ```text
 Tensor computation
         ↓
 Automatic differentiation
         ↓
-Neural networks
+Neural Networks
         ↓
 Transformers
         ↓
@@ -973,32 +1153,30 @@ Training
         ↓
 Inference
         ↓
-Language models
+Language Models
         ↓
-Multimodal intelligence
+Multimodal Intelligence
 ```
 
-while allowing those capabilities to be consumed naturally from different programming ecosystems.
-
-For TypeScript specifically, the long-term opportunity includes:
+The TypeScript runtime creates an additional opportunity:
 
 ```text
 Server AI
-   +
+    +
 Browser AI
-   +
+    +
 WebAssembly
-   +
+    +
 WebGPU
 ```
 
-allowing Edrion models and components to eventually operate across backend and frontend environments.
+allowing Edrion models and components to eventually execute across server and client environments.
 
 ---
 
 # Contributing
 
-Edrion is currently under active development.
+Edrion is under active development.
 
 Before submitting changes:
 
@@ -1006,14 +1184,15 @@ Before submitting changes:
 pnpm check
 ```
 
-New capabilities should follow the existing architectural principles:
+New features should follow the architectural principles of the project:
 
 - keep the core framework-independent
+- separate responsibilities
 - avoid unnecessary coupling
 - preserve strict typing
 - include tests
-- expose only intentional public APIs
-- maintain observability considerations
+- maintain intentional public APIs
+- consider observability from the beginning
 - document meaningful behavior
 
 ---
@@ -1030,7 +1209,7 @@ See the `LICENSE` file for the complete license text.
 
 <div align="center">
 
-## EDRION
+# EDRION
 
 **Building intelligence from the core.**
 

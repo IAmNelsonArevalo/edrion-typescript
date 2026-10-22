@@ -1,3 +1,2 @@
-export * from "./core/index.js";
-
-export * from "./nest/index.js";
+export * from './core';
+export * from './nest';

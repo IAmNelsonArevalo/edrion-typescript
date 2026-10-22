@@ -1,26 +1,46 @@
-import { describe, expect, it } from "vitest";
-import { Edrion } from "../../src/core/index.js";
-import { EdrionService } from "../../src/nest/index.js";
+import { describe, expect, it } from 'vitest';
 
-describe("EdrionService", () => {
-  it("should expose the runtime instance", () => {
-    const runtime = new Edrion(),
-      service = new EdrionService(runtime);
+import { Edrion } from '@core';
 
-    expect(service.getRuntime()).toBe(runtime);
-  });
+import { EdrionService } from '@nest';
 
-  it("should expose runtime information", () => {
-    const runtime = new Edrion({
-      observability: {
-        enabled: false,
-      },
+describe('EdrionService', () => {
+    it('should expose the core runtime', () => {
+        const runtime = new Edrion(),
+            service = new EdrionService(runtime);
+        expect(service.getRuntime()).toBe(runtime);
     });
 
-    const service = new EdrionService(runtime),
-      info = service.getRuntimeInfo();
+    it('should initialize Edrion on NestJS module initialization', async () => {
+        const runtime = new Edrion(),
+            service = new EdrionService(runtime);
 
-    expect(info.name).toBe("edrion-typescript");
-    expect(info.observabilityEnabled).toBe(false);
-  });
+        await service.onModuleInit();
+        expect(service.isReady()).toBe(true);
+        expect(service.getStatus()).toBe('ready');
+    });
+
+    it('should shutdown Edrion when NestJS module is destroyed', async () => {
+        const runtime = new Edrion(),
+            service = new EdrionService(runtime);
+
+        await service.onModuleInit();
+        await service.onModuleDestroy();
+        expect(service.getStatus()).toBe('stopped');
+    });
+
+    it('should expose runtime information', async () => {
+        const runtime = new Edrion(),
+            service = new EdrionService(runtime);
+
+        await service.onModuleInit();
+        expect(service.getRuntimeInfo().backend?.name).toBe('cpu');
+    });
+
+    it('should expose runtime metrics', async () => {
+        const runtime = new Edrion(),
+            service = new EdrionService(runtime);
+        await service.onModuleInit();
+        expect(service.getMetrics().initializationCount).toBe(1);
+    });
 });
