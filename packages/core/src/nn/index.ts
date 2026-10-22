@@ -6,3 +6,4 @@ export { Parameter, type ParameterOptions } from './parameter';
 
 export * from './layers';
 export * from './activations';
+export * from './transformer';
