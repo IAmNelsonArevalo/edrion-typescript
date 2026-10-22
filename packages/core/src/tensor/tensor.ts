@@ -486,46 +486,202 @@ export class Tensor {
     }
 
     /**
-     * Transposes a rank-2 matrix.
+     * Swaps the final two dimensions of a rank-2 or rank-3 tensor.
+     *
+     * FEATURE-011 extends transpose() to batched matrices so a tensor
+     * shaped [batch, rows, columns] becomes [batch, columns, rows].
      */
     public transpose(): Tensor {
-        if (this.rank !== 2) {
-            throw new TensorShapeError(`transpose() currently requires a rank-2 tensor. Received rank ${this.rank}.`);
+        if (this.rank !== 2 && this.rank !== 3) {
+            throw new TensorShapeError(
+                `transpose() requires a rank-2 or rank-3 tensor. Received rank ${this.rank}.`,
+            );
         }
 
-        const rows: number = readShapeDimension(this.tensorShape, 0);
-        const columns: number = readShapeDimension(this.tensorShape, 1);
-        const resultData: Float32Array = transposeMatrix(this.toFloat32Array(), rows, columns);
-        const resultShape: TensorShape = [columns, rows];
+        if (this.rank === 2) {
+            const rows: number = readShapeDimension(this.tensorShape, 0);
+            const columns: number = readShapeDimension(this.tensorShape, 1);
+            const resultData: Float32Array = transposeMatrix(this.toFloat32Array(), rows, columns);
+            const resultShape: TensorShape = [columns, rows];
+
+            const backward: BackwardFunction = (gradient: Float32Array): void => {
+                if (this.tensorRequiresGrad) {
+                    this.accumulateGradient(transposeMatrix(gradient, columns, rows));
+                }
+            };
+
+            return this.createOperationTensor(resultData, resultShape, this.tensorRequiresGrad, [this], backward);
+        }
+
+        const batchSize: number = readShapeDimension(this.tensorShape, 0);
+        const rows: number = readShapeDimension(this.tensorShape, 1);
+        const columns: number = readShapeDimension(this.tensorShape, 2);
+        const source: Float32Array = this.toFloat32Array();
+        const resultData: Float32Array = new Float32Array(source.length);
+        const sourceMatrixSize: number = rows * columns;
+        const targetMatrixSize: number = columns * rows;
+
+        for (let batch: number = 0; batch < batchSize; batch += 1) {
+            const sourceOffset: number = batch * sourceMatrixSize;
+            const targetOffset: number = batch * targetMatrixSize;
+            const matrix: Float32Array = source.slice(sourceOffset, sourceOffset + sourceMatrixSize);
+            resultData.set(transposeMatrix(matrix, rows, columns), targetOffset);
+        }
 
         const backward: BackwardFunction = (gradient: Float32Array): void => {
             if (!this.tensorRequiresGrad) {
                 return;
             }
 
-            this.accumulateGradient(transposeMatrix(gradient, columns, rows));
+            const inputGradient: Float32Array = new Float32Array(gradient.length);
+
+            for (let batch: number = 0; batch < batchSize; batch += 1) {
+                const sourceOffset: number = batch * targetMatrixSize;
+                const targetOffset: number = batch * sourceMatrixSize;
+                const matrix: Float32Array = gradient.slice(sourceOffset, sourceOffset + targetMatrixSize);
+                inputGradient.set(transposeMatrix(matrix, columns, rows), targetOffset);
+            }
+
+            this.accumulateGradient(inputGradient);
         };
 
-        return this.createOperationTensor(resultData, resultShape, this.tensorRequiresGrad, [this], backward);
+        return this.createOperationTensor(
+            resultData,
+            [batchSize, columns, rows],
+            this.tensorRequiresGrad,
+            [this],
+            backward,
+        );
     }
 
     /**
-     * Matrix multiplication for rank-2 tensors.
+     * Matrix multiplication for rank-2 matrices and rank-3 batched matrices.
+     *
+     * Supported FEATURE-011 shapes:
+     * - [M, K] @ [K, N] -> [M, N]
+     * - [B, M, K] @ [B, K, N] -> [B, M, N]
      */
     public matmul(right: Tensor): Tensor {
         this.assertCompatibleTensor(right);
 
-        if (this.rank !== 2 || right.rank !== 2) {
+        if (this.rank === 2 && right.rank === 2) {
+            return this.matmulRank2(right);
+        }
+
+        if (this.rank !== 3 || right.rank !== 3) {
             throw new TensorShapeError(
-                `matmul() currently requires two rank-2 tensors. Received ranks ${this.rank} and ${right.rank}.`,
+                `matmul() requires rank-2 matrices or matching rank-3 batched matrices. Received ranks ${this.rank} and ${right.rank}.`,
             );
         }
 
+        const batchSize: number = readShapeDimension(this.tensorShape, 0);
+        const leftRows: number = readShapeDimension(this.tensorShape, 1);
+        const leftColumns: number = readShapeDimension(this.tensorShape, 2);
+        const rightBatchSize: number = readShapeDimension(right.tensorShape, 0);
+        const rightRows: number = readShapeDimension(right.tensorShape, 1);
+        const rightColumns: number = readShapeDimension(right.tensorShape, 2);
+
+        if (batchSize !== rightBatchSize) {
+            throw new TensorShapeError(
+                `Batched matmul batch mismatch: left batch ${batchSize} and right batch ${rightBatchSize}.`,
+            );
+        }
+
+        if (leftColumns !== rightRows) {
+            throw new TensorShapeError(
+                `Cannot multiply batched matrices with shapes [${this.tensorShape.join(', ')}] and [${right.tensorShape.join(', ')}].`,
+            );
+        }
+
+        const leftData: Float32Array = this.toFloat32Array();
+        const rightData: Float32Array = right.toFloat32Array();
+        const leftMatrixSize: number = leftRows * leftColumns;
+        const rightMatrixSize: number = rightRows * rightColumns;
+        const outputMatrixSize: number = leftRows * rightColumns;
+        const resultData: Float32Array = new Float32Array(batchSize * outputMatrixSize);
+
+        for (let batch: number = 0; batch < batchSize; batch += 1) {
+            const leftOffset: number = batch * leftMatrixSize;
+            const rightOffset: number = batch * rightMatrixSize;
+            const outputOffset: number = batch * outputMatrixSize;
+            const batchResult: Float32Array = matmulOperation(
+                leftData.slice(leftOffset, leftOffset + leftMatrixSize),
+                leftRows,
+                leftColumns,
+                rightData.slice(rightOffset, rightOffset + rightMatrixSize),
+                rightRows,
+                rightColumns,
+            );
+            resultData.set(batchResult, outputOffset);
+        }
+
+        const requiresGrad: boolean = this.tensorRequiresGrad || right.tensorRequiresGrad;
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            const leftGradient: Float32Array = new Float32Array(leftData.length);
+            const rightGradient: Float32Array = new Float32Array(rightData.length);
+
+            for (let batch: number = 0; batch < batchSize; batch += 1) {
+                const leftOffset: number = batch * leftMatrixSize;
+                const rightOffset: number = batch * rightMatrixSize;
+                const gradientOffset: number = batch * outputMatrixSize;
+                const leftMatrix: Float32Array = leftData.slice(leftOffset, leftOffset + leftMatrixSize);
+                const rightMatrix: Float32Array = rightData.slice(rightOffset, rightOffset + rightMatrixSize);
+                const gradientMatrix: Float32Array = gradient.slice(gradientOffset, gradientOffset + outputMatrixSize);
+
+                if (this.tensorRequiresGrad) {
+                    const rightTranspose: Float32Array = transposeMatrix(rightMatrix, rightRows, rightColumns);
+                    leftGradient.set(
+                        matmulOperation(
+                            gradientMatrix,
+                            leftRows,
+                            rightColumns,
+                            rightTranspose,
+                            rightColumns,
+                            rightRows,
+                        ),
+                        leftOffset,
+                    );
+                }
+
+                if (right.tensorRequiresGrad) {
+                    const leftTranspose: Float32Array = transposeMatrix(leftMatrix, leftRows, leftColumns);
+                    rightGradient.set(
+                        matmulOperation(
+                            leftTranspose,
+                            leftColumns,
+                            leftRows,
+                            gradientMatrix,
+                            leftRows,
+                            rightColumns,
+                        ),
+                        rightOffset,
+                    );
+                }
+            }
+
+            if (this.tensorRequiresGrad) {
+                this.accumulateGradient(leftGradient);
+            }
+
+            if (right.tensorRequiresGrad) {
+                right.accumulateGradient(rightGradient);
+            }
+        };
+
+        return this.createOperationTensor(
+            resultData,
+            [batchSize, leftRows, rightColumns],
+            requiresGrad,
+            [this, right],
+            backward,
+        );
+    }
+
+    private matmulRank2(right: Tensor): Tensor {
         const leftRows: number = readShapeDimension(this.tensorShape, 0);
         const leftColumns: number = readShapeDimension(this.tensorShape, 1);
         const rightRows: number = readShapeDimension(right.tensorShape, 0);
         const rightColumns: number = readShapeDimension(right.tensorShape, 1);
-
         const leftData: Float32Array = this.toFloat32Array();
         const rightData: Float32Array = right.toFloat32Array();
         const resultData: Float32Array = matmulOperation(
@@ -536,57 +692,58 @@ export class Tensor {
             rightRows,
             rightColumns,
         );
-
         const requiresGrad: boolean = this.tensorRequiresGrad || right.tensorRequiresGrad;
-
-        const resultShape: TensorShape = [leftRows, rightColumns];
-
         const backward: BackwardFunction = (gradient: Float32Array): void => {
             if (this.tensorRequiresGrad) {
                 const rightTranspose: Float32Array = transposeMatrix(rightData, rightRows, rightColumns);
-
-                const leftGradient: Float32Array = matmulOperation(
-                    gradient,
-                    leftRows,
-                    rightColumns,
-                    rightTranspose,
-                    rightColumns,
-                    rightRows,
+                this.accumulateGradient(
+                    matmulOperation(
+                        gradient,
+                        leftRows,
+                        rightColumns,
+                        rightTranspose,
+                        rightColumns,
+                        rightRows,
+                    ),
                 );
-
-                this.accumulateGradient(leftGradient);
             }
 
             if (right.tensorRequiresGrad) {
                 const leftTranspose: Float32Array = transposeMatrix(leftData, leftRows, leftColumns);
-
-                const rightGradient: Float32Array = matmulOperation(
-                    leftTranspose,
-                    leftColumns,
-                    leftRows,
-                    gradient,
-                    leftRows,
-                    rightColumns,
+                right.accumulateGradient(
+                    matmulOperation(
+                        leftTranspose,
+                        leftColumns,
+                        leftRows,
+                        gradient,
+                        leftRows,
+                        rightColumns,
+                    ),
                 );
-
-                right.accumulateGradient(rightGradient);
             }
         };
 
-        return this.createOperationTensor(resultData, resultShape, requiresGrad, [this, right], backward);
+        return this.createOperationTensor(
+            resultData,
+            [leftRows, rightColumns],
+            requiresGrad,
+            [this, right],
+            backward,
+        );
     }
 
     /**
-     * Extracts a contiguous column range from a rank-2 tensor while
-     * preserving autograd connectivity.
+     * Extracts a contiguous range from the final tensor dimension.
+     * Supports [rows, columns] and [batch, rows, columns].
      */
     public sliceColumns(startColumn: number, endColumn: number): Tensor {
-        if (this.rank !== 2) {
-            throw new TensorShapeError(`sliceColumns() requires a rank-2 tensor. Received rank ${this.rank}.`);
+        if (this.rank !== 2 && this.rank !== 3) {
+            throw new TensorShapeError(
+                `sliceColumns() requires rank-2 or rank-3 input. Received rank ${this.rank}.`,
+            );
         }
 
-        const rows: number = readShapeDimension(this.tensorShape, 0);
-        const columns: number = readShapeDimension(this.tensorShape, 1);
+        const columns: number = readShapeDimension(this.tensorShape, this.rank - 1);
 
         if (!Number.isInteger(startColumn) || !Number.isInteger(endColumn)) {
             throw new TensorIndexError('sliceColumns() boundaries must be integers.');
@@ -599,10 +756,11 @@ export class Tensor {
         }
 
         const width: number = endColumn - startColumn;
+        const rowCount: number = this.tensorSize / columns;
         const source: Float32Array = this.toFloat32Array();
-        const result: Float32Array = new Float32Array(rows * width);
+        const result: Float32Array = new Float32Array(rowCount * width);
 
-        for (let row: number = 0; row < rows; row += 1) {
+        for (let row: number = 0; row < rowCount; row += 1) {
             for (let column: number = 0; column < width; column += 1) {
                 const sourceOffset: number = row * columns + startColumn + column;
                 const targetOffset: number = row * width + column;
@@ -617,7 +775,7 @@ export class Tensor {
 
             const inputGradient: Float32Array = new Float32Array(this.tensorSize);
 
-            for (let row: number = 0; row < rows; row += 1) {
+            for (let row: number = 0; row < rowCount; row += 1) {
                 for (let column: number = 0; column < width; column += 1) {
                     const sourceOffset: number = row * width + column;
                     const targetOffset: number = row * columns + startColumn + column;
@@ -628,11 +786,13 @@ export class Tensor {
             this.accumulateGradient(inputGradient);
         };
 
-        return this.createOperationTensor(result, [rows, width], this.tensorRequiresGrad, [this], backward);
+        const resultShape: number[] = [...this.tensorShape];
+        resultShape[resultShape.length - 1] = width;
+        return this.createOperationTensor(result, resultShape, this.tensorRequiresGrad, [this], backward);
     }
 
     /**
-     * Concatenates rank-2 tensors along their column axis.
+     * Concatenates rank-2 or rank-3 tensors along their final dimension.
      */
     public static concatColumns(tensors: readonly Tensor[]): Tensor {
         if (tensors.length === 0) {
@@ -645,11 +805,16 @@ export class Tensor {
             throw new TensorShapeError('concatColumns() could not resolve the first tensor.');
         }
 
-        if (first.rank !== 2) {
-            throw new TensorShapeError(`concatColumns() requires rank-2 tensors. Received rank ${first.rank}.`);
+        if (first.rank !== 2 && first.rank !== 3) {
+            throw new TensorShapeError(
+                `concatColumns() requires rank-2 or rank-3 tensors. Received rank ${first.rank}.`,
+            );
         }
 
-        const rows: number = readShapeDimension(first.tensorShape, 0);
+        const firstShape: readonly number[] = first.tensorShape;
+        const firstColumns: number = readShapeDimension(firstShape, first.rank - 1);
+        const rowCount: number = first.tensorSize / firstColumns;
+        const leadingShape: number[] = firstShape.slice(0, -1);
         let totalColumns: number = 0;
         let requiresGrad: boolean = false;
         const widths: number[] = new Array<number>(tensors.length);
@@ -663,29 +828,30 @@ export class Tensor {
 
             first.assertCompatibleTensor(tensor);
 
-            if (tensor.rank !== 2) {
+            if (tensor.rank !== first.rank) {
                 throw new TensorShapeError(
-                    `concatColumns() requires rank-2 tensors. Tensor ${index} has rank ${tensor.rank}.`,
+                    `concatColumns() rank mismatch: expected ${first.rank} but tensor ${index} has rank ${tensor.rank}.`,
                 );
             }
 
-            const tensorRows: number = readShapeDimension(tensor.tensorShape, 0);
-            const tensorColumns: number = readShapeDimension(tensor.tensorShape, 1);
-
-            if (tensorRows !== rows) {
-                throw new TensorShapeError(
-                    `concatColumns() row mismatch: expected ${rows} but tensor ${index} has ${tensorRows}.`,
-                );
+            const tensorShape: readonly number[] = tensor.tensorShape;
+            for (let axis: number = 0; axis < leadingShape.length; axis += 1) {
+                if (tensorShape[axis] !== leadingShape[axis]) {
+                    throw new TensorShapeError(
+                        `concatColumns() leading shape mismatch at tensor ${index}, axis ${axis}.`,
+                    );
+                }
             }
 
+            const tensorColumns: number = readShapeDimension(tensorShape, tensor.rank - 1);
             widths[index] = tensorColumns;
             totalColumns += tensorColumns;
             requiresGrad = requiresGrad || tensor.tensorRequiresGrad;
         }
 
-        const result: Float32Array = new Float32Array(rows * totalColumns);
+        const result: Float32Array = new Float32Array(rowCount * totalColumns);
 
-        for (let row: number = 0; row < rows; row += 1) {
+        for (let row: number = 0; row < rowCount; row += 1) {
             let outputColumn: number = 0;
 
             for (let tensorIndex: number = 0; tensorIndex < tensors.length; tensorIndex += 1) {
@@ -699,9 +865,7 @@ export class Tensor {
                 const data: Float32Array = tensor.toFloat32Array();
 
                 for (let column: number = 0; column < width; column += 1) {
-                    const sourceOffset: number = row * width + column;
-                    const targetOffset: number = row * totalColumns + outputColumn;
-                    result[targetOffset] = readArrayValue(data, sourceOffset);
+                    result[row * totalColumns + outputColumn] = readArrayValue(data, row * width + column);
                     outputColumn += 1;
                 }
             }
@@ -719,13 +883,14 @@ export class Tensor {
                 }
 
                 if (tensor.tensorRequiresGrad) {
-                    const tensorGradient: Float32Array = new Float32Array(rows * width);
+                    const tensorGradient: Float32Array = new Float32Array(rowCount * width);
 
-                    for (let row: number = 0; row < rows; row += 1) {
+                    for (let row: number = 0; row < rowCount; row += 1) {
                         for (let column: number = 0; column < width; column += 1) {
-                            const sourceOffset: number = row * totalColumns + startColumn + column;
-                            const targetOffset: number = row * width + column;
-                            tensorGradient[targetOffset] = readArrayValue(gradient, sourceOffset);
+                            tensorGradient[row * width + column] = readArrayValue(
+                                gradient,
+                                row * totalColumns + startColumn + column,
+                            );
                         }
                     }
 
@@ -736,7 +901,13 @@ export class Tensor {
             }
         };
 
-        return first.createOperationTensor(result, [rows, totalColumns], requiresGrad, tensors, backward);
+        return first.createOperationTensor(
+            result,
+            [...leadingShape, totalColumns],
+            requiresGrad,
+            tensors,
+            backward,
+        );
     }
 
     /**

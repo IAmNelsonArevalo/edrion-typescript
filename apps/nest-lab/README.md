@@ -1,5 +1,10 @@
-# Nest Lab
+# Edrion Nest Lab
 
-Reserved integration laboratory for Edrion + NestJS.
+Executable NestJS consumer used by Edrion's integration QA.
 
-FEATURE-000 establishes the monorepo and official NestJS adapter. The executable lab application is intentionally introduced in later development work so the foundation remains focused on package architecture.
+It validates that `@edrion/nestjs` works outside its own package boundary, including dependency injection, module lifecycle, runtime initialization, health reporting and shutdown.
+
+```bash
+pnpm --filter @edrion/nest-lab test
+pnpm --filter @edrion/nest-lab build
+```

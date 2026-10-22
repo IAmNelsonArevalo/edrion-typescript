@@ -1,208 +1,149 @@
-# Edrion TypeScript — FEATURE-004 / v0.5.0
+# Edrion TypeScript — v1.1.0
 
-Edrion is a TypeScript-first AI and deep-learning framework designed around a framework-independent mathematical core.
-
-FEATURE-004 introduces the first neural-network abstraction layer on top of the differentiable Tensor engine delivered in FEATURE-003.
+Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, Transformer stack, training pipeline, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v0.5.0 — FEATURE-004: Neural Network Core`
+`v1.1.0 — FEATURE-011: QA Fixes + Batched Tensor Engine`
 
-## Included in FEATURE-004
+## FEATURE-011 goals
 
-### Module system
+FEATURE-011 closes the two QA gaps detected in v1.0.0 and removes one of the largest architectural limits in the first stable release: Transformer execution was restricted to one sequence at a time.
 
-- `Module`
-- recursive parameter registration
-- child-module registration
-- `parameters()`
-- `namedParameters()`
-- `zeroGrad()`
-- recursive `train()` / `eval()` modes
+### QA fixes
 
-### Trainable parameters
+- pins an exact Corepack-compatible pnpm version with `packageManager: "pnpm@10.0.0"`;
+- adds `scripts/verify-package-manager.mjs` and makes it part of `pnpm check`;
+- converts `apps/nest-lab` from documentation-only scaffolding into a real executable NestJS consumer;
+- adds a NestJS integration test covering DI, initialization, health reporting and shutdown.
 
-- `Parameter extends Tensor`
-- `requiresGrad: true` by construction
-- compatible with FEATURE-003 autograd
+### Batched Tensor Engine
 
-### Layers
-
-- `Linear`
-- `Embedding`
-- `LayerNormalization`
-
-### Activations
-
-- `ReLU`
-- `Sigmoid`
-- `Tanh`
-- `GELU`
-- `Softmax`
-
-### Tensor addition
-
-FEATURE-004 adds an exact differentiable `Tensor.relu()` primitive so ReLU does not rely on an unstable approximation.
-
-## Linear
-
-```ts
-import { Linear, Tensor } from '@edrion/core';
-
-const layer: Linear = new Linear(4, 8);
-
-const input: Tensor = new Tensor([1, 2, 3, 4, 5, 6, 7, 8], [2, 4], {
-    requiresGrad: true,
-});
-
-const output: Tensor = layer.forward(input);
-const loss: Tensor = output.mean();
-
-loss.backward();
-
-console.log(layer.weight.grad?.shape);
-```
-
-## Embedding
-
-Embedding receives integer token IDs represented by a Tensor and returns dense vectors while preserving gradients for the embedding matrix.
-
-```ts
-import { Embedding, Tensor } from '@edrion/core';
-
-const embedding: Embedding = new Embedding(1000, 128);
-
-const tokenIds: Tensor = new Tensor([10, 24, 10, 99], [4]);
-
-const vectors: Tensor = embedding.forward(tokenIds);
-
-console.log(vectors.shape);
-// [4, 128]
-```
-
-## Layer Normalization
-
-```ts
-import { LayerNormalization, Tensor } from '@edrion/core';
-
-const normalization: LayerNormalization = new LayerNormalization(128);
-
-const output: Tensor = normalization.forward(input);
-```
-
-Layer normalization currently normalizes the final tensor dimension and supports optional affine parameters.
-
-## Activations
-
-```ts
-import { GELU, ReLU, Sigmoid, Softmax, Tanh } from '@edrion/core';
-```
-
-Example:
-
-```ts
-const activation: GELU = new GELU();
-const output: Tensor = activation.forward(input);
-```
-
-## Module Parameters
-
-```ts
-const parameters = model.parameters();
-const namedParameters = model.namedParameters();
-
-model.zeroGrad();
-model.train();
-model.eval();
-```
-
-Nested modules are traversed recursively.
-
-## Architecture
+`Tensor.matmul()` now supports:
 
 ```text
-@edrion/core
-│
-├── autograd
-├── backend
-├── metrics
-├── runtime
-├── tensor
-│   ├── operations
-│   └── autograd-enabled Tensor
-│
-└── nn
-    ├── Module
-    ├── Parameter
-    ├── layers
-    │   ├── Linear
-    │   ├── Embedding
-    │   └── LayerNormalization
-    └── activations
-        ├── ReLU
-        ├── Sigmoid
-        ├── Tanh
-        ├── GELU
-        └── Softmax
+[M, K] @ [K, N]             -> [M, N]
+[B, M, K] @ [B, K, N]       -> [B, M, N]
 ```
 
-## Important Design Decisions
+Batched matmul remains connected to Autograd and computes gradients for both operands.
 
-- Neural-network layers reuse Tensor operations and autograd instead of implementing a second gradient engine.
-- `Linear` uses `matmul()` plus broadcasting from FEATURE-003.
-- `Embedding` uses one-hot projection through `matmul()` so gradients naturally accumulate into its trainable weight matrix.
-- `LayerNormalization` is composed from differentiable Tensor operations.
-- Softmax numerical stabilization is intentionally reserved for FEATURE-009, where numerical-safety policies are introduced consistently across the framework.
+`Tensor.transpose()` now supports rank-3 batched matrices by swapping their final two dimensions.
+
+`sliceColumns()` and `concatColumns()` now support both rank-2 and rank-3 tensors, preserving Autograd connectivity.
+
+### Batched neural-network execution
+
+`Linear` now accepts any rank greater than or equal to 1 as long as the final dimension matches `inFeatures`. Leading dimensions are preserved.
+
+Examples:
+
+```text
+[features]                    -> [outFeatures]
+[sequence, features]          -> [sequence, outFeatures]
+[batch, sequence, features]   -> [batch, sequence, outFeatures]
+```
+
+### Batched Transformer
+
+The Transformer can now execute:
+
+```text
+[sequence]
+```
+
+and:
+
+```text
+[batch, sequence]
+```
+
+Token input:
+
+```text
+[batch, sequence]
+```
+
+becomes:
+
+```text
+[batch, sequence, embedding]
+```
+
+and finally:
+
+```text
+[batch, sequence, vocabulary]
+```
+
+Multi-head attention and scaled dot-product attention also accept batched hidden states.
+
+## Production capabilities
+
+v1.1.0 exposes two additional runtime capabilities:
+
+```text
+tensor:batched-matmul
+transformer:batched
+```
+
+## Validation performed for FEATURE-011
+
+The FEATURE-011 snapshot was independently compiled with strict TypeScript settings and exercised with a runtime harness that verified:
+
+- rank-3 batched matmul values;
+- batched matmul gradients;
+- rank-3 transpose;
+- batched multi-head attention;
+- gradient propagation through batched attention;
+- Transformer logits with shape `[batch, sequence, vocabulary]`;
+- v1.1.0 production capability metadata.
+
+The independent runtime harness returned `PASS`.
+
+## Packages
+
+```text
+@edrion/core        1.1.0
+@edrion/nestjs      1.1.0
+edrion-typescript   1.1.0
+@edrion/nest-lab    1.1.0
+```
 
 ## Branch
 
 ```bash
-git switch -c EDR-TS/feature/004-neural-network-core
+git switch -c EDR-TS/feature/011-batched-tensor-engine
 ```
 
 ## Commit
 
 ```bash
 git add .
-git commit -m "feat(EDR-TS-004): add neural network core"
-```
-
-## Pull Request
-
-```text
-EDR-TS-004: Neural Network Core
+git commit -m "feat(EDR-TS-011): add batched tensor engine and resolve v1 QA gaps"
 ```
 
 ## Quality Gate
 
 ```bash
 pnpm install
-pnpm typecheck
-pnpm typecheck:test
-pnpm lint
-pnpm test
-pnpm build
 pnpm check
 ```
 
-## Feature Roadmap
+`pnpm check` now includes package-manager reproducibility verification and the real NestJS consumer integration suite.
 
-| Version | Feature                                          | Status  |
-| ------- | ------------------------------------------------ | ------- |
-| v0.1.0  | FEATURE-000 — NestJS / Monorepo Foundation       | ✅      |
-| v0.2.0  | FEATURE-001 — Core Runtime + Backend Abstraction | ✅      |
-| v0.3.0  | FEATURE-002 — Tensor Core                        | ✅      |
-| v0.4.0  | FEATURE-003 — Tensor Operations + Autograd       | ✅      |
-| v0.5.0  | FEATURE-004 — Neural Network Core                | ✅      |
-| v0.6.0  | FEATURE-005 — Losses + Optimizers                | Next    |
-| v0.7.0  | FEATURE-006 — Transformer Foundation             | Planned |
-| v0.8.0  | FEATURE-007 — Tokenizer + Generation             | Planned |
-| v0.9.0  | FEATURE-008 — Training + Serialization           | Planned |
-| v0.10.x | FEATURE-009 — Stability Lab + Numerical Safety   | Planned |
-| v1.0.0  | FEATURE-010 — Production Foundation              | Planned |
+## Roadmap
 
-## Version
-
-- `@edrion/core`: `0.5.0`
-- `@edrion/nestjs`: `0.5.0`
-- `edrion-typescript`: `0.5.0`
+| Version | Feature | Status |
+| --- | --- | --- |
+| v1.0.0 | FEATURE-010 — Production Foundation | ✅ |
+| v1.1.0 | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅ |
+| v1.2.0 | FEATURE-012 — Dataset + DataLoader | Next |
+| v1.3.0 | FEATURE-013 — Advanced Tokenization / BPE | Planned |
+| v1.4.0 | FEATURE-014 — Modern Transformer Architecture | Planned |
+| v1.5.0 | FEATURE-015 — Advanced Training Engine | Planned |
+| v1.6.0 | FEATURE-016 — KV Cache + Streaming Generation | Planned |
+| v1.7.0 | FEATURE-017 — WebGPU Backend | Planned |
+| v1.8.0 | FEATURE-018 — Mixed Precision | Planned |
+| v1.9.0 | FEATURE-019 — Large Model Infrastructure | Planned |
+| v2.0.0 | Edrion Language Model Foundation | Planned |

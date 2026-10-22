@@ -1,7 +1,9 @@
-/** Stable capability identifiers exposed by Edrion v1.0.0. */
+/** Stable capability identifiers exposed by Edrion v1.1.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
+    | 'tensor:batched-matmul'
+    | 'transformer:batched'
     | 'generation'
     | 'losses'
     | 'neural-network'
@@ -22,6 +24,8 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'tensor',
     'autograd',
     'backend:cpu',
+    'tensor:batched-matmul',
+    'transformer:batched',
     'neural-network',
     'losses',
     'optimizers',
@@ -33,7 +37,7 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'numerical-safety',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.0.0. */
+/** Returns the stable capabilities available in Edrion v1.1.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],

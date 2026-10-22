@@ -12,7 +12,8 @@ export interface MultiHeadAttentionOptions {
 }
 
 /**
- * Multi-head self-attention for [sequence, embedding] tensors.
+ * Multi-head self-attention for [sequence, embedding] and
+ * [batch, sequence, embedding] tensors.
  */
 export class MultiHeadAttention extends Module {
     public readonly embeddingDimension: number;
@@ -66,15 +67,17 @@ export class MultiHeadAttention extends Module {
     }
 
     public override forward(input: Tensor): Tensor {
-        if (input.rank !== 2) {
+        if (input.rank !== 2 && input.rank !== 3) {
             throw new AttentionShapeError(
-                `MultiHeadAttention expects rank-2 [sequence, embedding] input. Received rank ${input.rank}.`,
+                `MultiHeadAttention expects [sequence, embedding] or [batch, sequence, embedding] input. Received rank ${input.rank}.`,
             );
         }
 
         const shape: readonly number[] = input.shape;
-        const sequenceLength: number | undefined = shape[0];
-        const embeddingDimension: number | undefined = shape[1];
+        const sequenceAxis: number = input.rank - 2;
+        const embeddingAxis: number = input.rank - 1;
+        const sequenceLength: number | undefined = shape[sequenceAxis];
+        const embeddingDimension: number | undefined = shape[embeddingAxis];
 
         if (sequenceLength === undefined || embeddingDimension === undefined) {
             throw new AttentionShapeError('Unable to resolve self-attention input dimensions.');
