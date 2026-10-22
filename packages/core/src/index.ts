@@ -1,5 +1,6 @@
 export * from './autograd';
 export * from './backend';
+export * from './generation';
 
 export {
     normalizeEdrionOptions,
@@ -18,3 +19,5 @@ export * from './nn';
 export * from './optim';
 export * from './runtime';
 export * from './tensor';
+
+export * from './tokenizer';
