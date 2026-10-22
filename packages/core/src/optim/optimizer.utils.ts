@@ -32,5 +32,15 @@ export function getParameterGradient(parameter: Parameter): Float32Array | undef
         );
     }
 
-    return gradient.toFloat32Array();
+    const values: Float32Array = gradient.toFloat32Array();
+
+    for (let index: number = 0; index < values.length; index += 1) {
+        const value: number | undefined = values[index];
+
+        if (value === undefined || !Number.isFinite(value)) {
+            throw new OptimizerError(`Parameter gradient contains a non-finite value at flat offset ${index}.`);
+        }
+    }
+
+    return values;
 }

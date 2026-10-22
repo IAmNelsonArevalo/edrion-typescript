@@ -46,6 +46,12 @@ export class Parameter extends Tensor {
                 throw new TensorDataError(`Missing parameter assignment value at flat offset ${offset}.`);
             }
 
+            if (!Number.isFinite(value)) {
+                throw new TensorDataError(
+                    `Parameter assignment contains non-finite value ${value} at flat offset ${offset}.`,
+                );
+            }
+
             const indices: number[] = unravelTensorIndex(offset, shape);
 
             this.set(indices, value);
