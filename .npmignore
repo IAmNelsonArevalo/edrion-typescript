@@ -1,0 +1,13 @@
+src/
+test/
+coverage/
+
+*.log
+
+tsconfig.json
+tsconfig.build.json
+
+eslint.config.mjs
+prettier.config.mjs
+vitest.config.ts
+tsup.config.ts
