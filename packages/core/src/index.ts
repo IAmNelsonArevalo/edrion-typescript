@@ -21,3 +21,5 @@ export * from './runtime';
 export * from './tensor';
 
 export * from './tokenizer';
+export * from './serialization';
+export * from './training';
