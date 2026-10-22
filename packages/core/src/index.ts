@@ -13,5 +13,7 @@ export {
 } from './config/edrion-options';
 
 export * from './metrics';
+
+export * from './nn';
 export * from './runtime';
 export * from './tensor';

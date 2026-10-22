@@ -1,6 +1,6 @@
 {
     "name": "@edrion/nestjs",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Official NestJS integration for Edrion",
     "license": "MIT",
     "type": "module",
