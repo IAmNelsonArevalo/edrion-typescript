@@ -577,6 +577,169 @@ export class Tensor {
     }
 
     /**
+     * Extracts a contiguous column range from a rank-2 tensor while
+     * preserving autograd connectivity.
+     */
+    public sliceColumns(startColumn: number, endColumn: number): Tensor {
+        if (this.rank !== 2) {
+            throw new TensorShapeError(`sliceColumns() requires a rank-2 tensor. Received rank ${this.rank}.`);
+        }
+
+        const rows: number = readShapeDimension(this.tensorShape, 0);
+        const columns: number = readShapeDimension(this.tensorShape, 1);
+
+        if (!Number.isInteger(startColumn) || !Number.isInteger(endColumn)) {
+            throw new TensorIndexError('sliceColumns() boundaries must be integers.');
+        }
+
+        if (startColumn < 0 || endColumn > columns || startColumn >= endColumn) {
+            throw new TensorIndexError(
+                `Invalid column range [${startColumn}, ${endColumn}) for tensor with ${columns} columns.`,
+            );
+        }
+
+        const width: number = endColumn - startColumn;
+        const source: Float32Array = this.toFloat32Array();
+        const result: Float32Array = new Float32Array(rows * width);
+
+        for (let row: number = 0; row < rows; row += 1) {
+            for (let column: number = 0; column < width; column += 1) {
+                const sourceOffset: number = row * columns + startColumn + column;
+                const targetOffset: number = row * width + column;
+                result[targetOffset] = readArrayValue(source, sourceOffset);
+            }
+        }
+
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            if (!this.tensorRequiresGrad) {
+                return;
+            }
+
+            const inputGradient: Float32Array = new Float32Array(this.tensorSize);
+
+            for (let row: number = 0; row < rows; row += 1) {
+                for (let column: number = 0; column < width; column += 1) {
+                    const sourceOffset: number = row * width + column;
+                    const targetOffset: number = row * columns + startColumn + column;
+                    inputGradient[targetOffset] = readArrayValue(gradient, sourceOffset);
+                }
+            }
+
+            this.accumulateGradient(inputGradient);
+        };
+
+        return this.createOperationTensor(result, [rows, width], this.tensorRequiresGrad, [this], backward);
+    }
+
+    /**
+     * Concatenates rank-2 tensors along their column axis.
+     */
+    public static concatColumns(tensors: readonly Tensor[]): Tensor {
+        if (tensors.length === 0) {
+            throw new TensorShapeError('concatColumns() requires at least one tensor.');
+        }
+
+        const first: Tensor | undefined = tensors[0];
+
+        if (first === undefined) {
+            throw new TensorShapeError('concatColumns() could not resolve the first tensor.');
+        }
+
+        if (first.rank !== 2) {
+            throw new TensorShapeError(`concatColumns() requires rank-2 tensors. Received rank ${first.rank}.`);
+        }
+
+        const rows: number = readShapeDimension(first.tensorShape, 0);
+        let totalColumns: number = 0;
+        let requiresGrad: boolean = false;
+        const widths: number[] = new Array<number>(tensors.length);
+
+        for (let index: number = 0; index < tensors.length; index += 1) {
+            const tensor: Tensor | undefined = tensors[index];
+
+            if (tensor === undefined) {
+                throw new TensorShapeError(`concatColumns() tensor at index ${index} does not exist.`);
+            }
+
+            first.assertCompatibleTensor(tensor);
+
+            if (tensor.rank !== 2) {
+                throw new TensorShapeError(
+                    `concatColumns() requires rank-2 tensors. Tensor ${index} has rank ${tensor.rank}.`,
+                );
+            }
+
+            const tensorRows: number = readShapeDimension(tensor.tensorShape, 0);
+            const tensorColumns: number = readShapeDimension(tensor.tensorShape, 1);
+
+            if (tensorRows !== rows) {
+                throw new TensorShapeError(
+                    `concatColumns() row mismatch: expected ${rows} but tensor ${index} has ${tensorRows}.`,
+                );
+            }
+
+            widths[index] = tensorColumns;
+            totalColumns += tensorColumns;
+            requiresGrad = requiresGrad || tensor.tensorRequiresGrad;
+        }
+
+        const result: Float32Array = new Float32Array(rows * totalColumns);
+
+        for (let row: number = 0; row < rows; row += 1) {
+            let outputColumn: number = 0;
+
+            for (let tensorIndex: number = 0; tensorIndex < tensors.length; tensorIndex += 1) {
+                const tensor: Tensor | undefined = tensors[tensorIndex];
+                const width: number | undefined = widths[tensorIndex];
+
+                if (tensor === undefined || width === undefined) {
+                    throw new TensorShapeError(`concatColumns() missing tensor metadata at index ${tensorIndex}.`);
+                }
+
+                const data: Float32Array = tensor.toFloat32Array();
+
+                for (let column: number = 0; column < width; column += 1) {
+                    const sourceOffset: number = row * width + column;
+                    const targetOffset: number = row * totalColumns + outputColumn;
+                    result[targetOffset] = readArrayValue(data, sourceOffset);
+                    outputColumn += 1;
+                }
+            }
+        }
+
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            let startColumn: number = 0;
+
+            for (let tensorIndex: number = 0; tensorIndex < tensors.length; tensorIndex += 1) {
+                const tensor: Tensor | undefined = tensors[tensorIndex];
+                const width: number | undefined = widths[tensorIndex];
+
+                if (tensor === undefined || width === undefined) {
+                    throw new AutogradError(`concatColumns() missing autograd metadata at index ${tensorIndex}.`);
+                }
+
+                if (tensor.tensorRequiresGrad) {
+                    const tensorGradient: Float32Array = new Float32Array(rows * width);
+
+                    for (let row: number = 0; row < rows; row += 1) {
+                        for (let column: number = 0; column < width; column += 1) {
+                            const sourceOffset: number = row * totalColumns + startColumn + column;
+                            const targetOffset: number = row * width + column;
+                            tensorGradient[targetOffset] = readArrayValue(gradient, sourceOffset);
+                        }
+                    }
+
+                    tensor.accumulateGradient(tensorGradient);
+                }
+
+                startColumn += width;
+            }
+        };
+
+        return first.createOperationTensor(result, [rows, totalColumns], requiresGrad, tensors, backward);
+    }
+
+    /**
      * Creates an independent tensor with a compatible shape.
      */
     public reshape(newShape: TensorShape): Tensor {
