@@ -51,7 +51,7 @@ describe('Edrion Runtime FEATURE-001', (): void => {
 
         const information: EdrionRuntimeInfo = edrion.getRuntimeInfo();
 
-        expect(information.version).toBe('0.5.0');
+        expect(information.version).toBe('0.6.0');
         expect(information.backend?.name).toBe('cpu');
         expect(information.executionContext.runtimeId.length).toBeGreaterThan(0);
         expect(information.executionContext.metadata['application']).toBe('test-app');
