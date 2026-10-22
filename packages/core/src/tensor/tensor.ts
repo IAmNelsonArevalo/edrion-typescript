@@ -440,6 +440,38 @@ export class Tensor {
     }
 
     /**
+     * Applies the Rectified Linear Unit activation element-wise.
+     */
+    public relu(): Tensor {
+        const inputData: Float32Array = this.toFloat32Array();
+        const resultData: Float32Array = new Float32Array(this.tensorSize);
+
+        for (let index: number = 0; index < this.tensorSize; index += 1) {
+            const value: number = readArrayValue(inputData, index);
+            resultData[index] = value > 0 ? value : 0;
+        }
+
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            if (!this.tensorRequiresGrad) {
+                return;
+            }
+
+            const inputGradient: Float32Array = new Float32Array(this.tensorSize);
+
+            for (let index: number = 0; index < this.tensorSize; index += 1) {
+                const value: number = readArrayValue(inputData, index);
+                const upstream: number = readArrayValue(gradient, index);
+
+                inputGradient[index] = value > 0 ? upstream : 0;
+            }
+
+            this.accumulateGradient(inputGradient);
+        };
+
+        return this.createOperationTensor(resultData, this.tensorShape, this.tensorRequiresGrad, [this], backward);
+    }
+
+    /**
      * Reduces tensor values using sum.
      */
     public sum(axis?: number, keepDims: boolean = false): Tensor {
