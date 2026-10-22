@@ -12,8 +12,9 @@ export {
     type NormalizedEdrionRuntimeOptions,
 } from './config/edrion-options';
 
+export * from './losses';
 export * from './metrics';
-
 export * from './nn';
+export * from './optim';
 export * from './runtime';
 export * from './tensor';
