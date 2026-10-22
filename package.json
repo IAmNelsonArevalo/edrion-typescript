@@ -1,6 +1,6 @@
 {
     "name": "edrion-typescript",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "TypeScript AI runtime and NestJS integration for the Edrion ecosystem",
     "keywords": [
         "edrion",
