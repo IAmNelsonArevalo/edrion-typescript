@@ -6,6 +6,15 @@ import {
 } from '@core/backend';
 import { normalizeEdrionOptions, type EdrionOptions, type NormalizedEdrionOptions } from '@core/config/edrion-options';
 import { EdrionRuntimeMetrics, type EdrionRuntimeMetricsSnapshot } from '@core/metrics';
+import {
+    EDRION_VERSION,
+    createEdrionHealthReport,
+    getEdrionCapabilities,
+    getEdrionReleaseInfo,
+    type EdrionCapabilities,
+    type EdrionHealthReport,
+    type EdrionReleaseInfo,
+} from '@core/production';
 import { createExecutionContext, type EdrionExecutionContext } from '@core/runtime/execution-context';
 import {
     assertRuntimeStateTransition,
@@ -34,8 +43,6 @@ export interface EdrionRuntimeInfo {
  * execution context and runtime metrics.
  */
 export class Edrion {
-    private static readonly VERSION: string = '0.10.0';
-
     private readonly options: NormalizedEdrionOptions;
     private readonly backendRegistry: BackendRegistry;
     private readonly executionContext: EdrionExecutionContext;
@@ -159,7 +166,7 @@ export class Edrion {
         const metrics: EdrionRuntimeMetricsSnapshot = this.getMetrics();
 
         return {
-            version: Edrion.VERSION,
+            version: EDRION_VERSION,
             executionContext: this.executionContext,
             status,
             backend: backendInfo,
@@ -169,7 +176,24 @@ export class Edrion {
 
     /** Returns the framework version. */
     public getVersion(): string {
-        return Edrion.VERSION;
+        return EDRION_VERSION;
+    }
+
+    /** Returns stable release information for this framework build. */
+    public getReleaseInfo(): EdrionReleaseInfo {
+        return getEdrionReleaseInfo();
+    }
+
+    /** Returns the production capabilities available in this release. */
+    public getCapabilities(): EdrionCapabilities {
+        return getEdrionCapabilities();
+    }
+
+    /** Returns a production-oriented health report for this runtime. */
+    public getHealthReport(): EdrionHealthReport {
+        const backend: EdrionBackendInfo | undefined = this.backend?.getInfo();
+
+        return createEdrionHealthReport(this.getStatus(), backend, this.getMetrics());
     }
 
     private transitionTo(nextState: EdrionRuntimeState): void {

@@ -1,9 +1,12 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import {
     Edrion,
+    type EdrionCapabilities,
     type EdrionExecutionContext,
+    type EdrionHealthReport,
     type EdrionRuntimeInfo,
     type EdrionRuntimeMetricsSnapshot,
+    type EdrionReleaseInfo,
     type EdrionRuntimeStatus,
     type NormalizedEdrionOptions,
 } from '@edrion/core';
@@ -60,6 +63,21 @@ export class EdrionService implements OnModuleInit, OnModuleDestroy {
     /** Returns the current Edrion version. */
     public getVersion(): string {
         return this.edrion.getVersion();
+    }
+
+    /** Returns stable release metadata. */
+    public getReleaseInfo(): EdrionReleaseInfo {
+        return this.edrion.getReleaseInfo();
+    }
+
+    /** Returns capabilities supported by the installed Edrion release. */
+    public getCapabilities(): EdrionCapabilities {
+        return this.edrion.getCapabilities();
+    }
+
+    /** Returns a health report suitable for NestJS health endpoints. */
+    public getHealthReport(): EdrionHealthReport {
+        return this.edrion.getHealthReport();
     }
 
     /** Compatibility API retained from FEATURE-000. */
