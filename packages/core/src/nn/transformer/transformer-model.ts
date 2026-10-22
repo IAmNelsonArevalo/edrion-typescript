@@ -14,7 +14,7 @@ import { Tensor } from '@core/tensor/tensor';
 /**
  * Decoder-only Transformer language-model foundation.
  *
- * FEATURE-006 accepts one token sequence at a time with input shape [sequence].
+ * FEATURE-011 accepts [sequence] and batched [batch, sequence] token inputs.
  */
 export class TransformerModel extends Module {
     public readonly config: NormalizedTransformerConfig;
@@ -71,17 +71,17 @@ export class TransformerModel extends Module {
     }
 
     /**
-     * Produces vocabulary logits with shape [sequence, vocabularySize].
+     * Produces [sequence, vocabularySize] or [batch, sequence, vocabularySize] logits.
      */
     public override forward(tokens: Tensor): Tensor {
-        if (tokens.rank !== 1) {
+        if (tokens.rank !== 1 && tokens.rank !== 2) {
             throw new TransformerError(
-                `TransformerModel expects token input with rank 1. Received rank ${tokens.rank}.`,
+                `TransformerModel expects [sequence] or [batch, sequence] token input. Received rank ${tokens.rank}.`,
             );
         }
 
         const tokenShape: readonly number[] = tokens.shape;
-        const sequenceLength: number | undefined = tokenShape[0];
+        const sequenceLength: number | undefined = tokenShape[tokens.rank - 1];
 
         if (sequenceLength === undefined) {
             throw new TransformerError('Unable to resolve token sequence length.');
