@@ -1,11 +1,11 @@
 /**
- * NestJS injection token containing the
- * framework-agnostic Edrion runtime instance.
+ * NestJS dependency injection token containing
+ * the Edrion runtime instance.
  */
-export const EDRION_INSTANCE = Symbol("EDRION_INSTANCE");
+export const EDRION_INSTANCE = Symbol('EDRION_INSTANCE');
 
 /**
- * NestJS injection token containing
- * the Edrion module configuration.
+ * NestJS dependency injection token containing
+ * Edrion configuration.
  */
-export const EDRION_OPTIONS = Symbol("EDRION_OPTIONS");
+export const EDRION_OPTIONS = Symbol('EDRION_OPTIONS');

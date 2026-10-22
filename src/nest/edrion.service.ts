@@ -1,36 +1,64 @@
-import { Inject, Injectable } from "@nestjs/common";
-
-import { Edrion, type EdrionRuntimeInfo } from "../core/index.js";
-
-import { EDRION_INSTANCE } from "./constants/edrion.constants.js";
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import { Edrion, type EdrionRuntimeInfo, type EdrionRuntimeMetricsSnapshot, type EdrionRuntimeStatus } from '@core';
+import { EDRION_INSTANCE } from '@nest/constants/edrion.constants';
 
 /**
- * NestJS facade around the core Edrion runtime.
- *
- * NestJS applications should inject this service
- * when interacting with Edrion.
+ * NestJS facade for the Edrion runtime.
  */
 @Injectable()
-export class EdrionService {
-  /**
-   * Creates the NestJS Edrion facade.
-   */
-  constructor(
-    @Inject(EDRION_INSTANCE)
-    private readonly runtime: Edrion,
-  ) {}
+export class EdrionService implements OnModuleInit, OnModuleDestroy {
+    constructor(
+        @Inject(EDRION_INSTANCE)
+        private readonly runtime: Edrion,
+    ) {}
 
-  /**
-   * Returns the underlying framework-agnostic runtime.
-   */
-  getRuntime(): Edrion {
-    return this.runtime;
-  }
+    /**
+     * Initializes Edrion when NestJS starts this module.
+     */
+    async onModuleInit(): Promise<void> {
+        await this.runtime.initialize();
+    }
 
-  /**
-   * Returns runtime metadata.
-   */
-  getRuntimeInfo(): EdrionRuntimeInfo {
-    return this.runtime.getRuntimeInfo();
-  }
+    /**
+     * Gracefully releases Edrion resources
+     * when NestJS destroys this module.
+     */
+    async onModuleDestroy(): Promise<void> {
+        await this.runtime.shutdown();
+    }
+
+    /**
+     * Returns the framework-independent Edrion runtime.
+     */
+    getRuntime(): Edrion {
+        return this.runtime;
+    }
+
+    /**
+     * Returns Edrion runtime information.
+     */
+    getRuntimeInfo(): EdrionRuntimeInfo {
+        return this.runtime.getRuntimeInfo();
+    }
+
+    /**
+     * Returns current runtime status.
+     */
+    getStatus(): EdrionRuntimeStatus {
+        return this.runtime.getStatus();
+    }
+
+    /**
+     * Indicates whether Edrion is ready.
+     */
+    isReady(): boolean {
+        return this.runtime.isReady();
+    }
+
+    /**
+     * Returns runtime metrics.
+     */
+    getMetrics(): EdrionRuntimeMetricsSnapshot {
+        return this.runtime.getMetrics();
+    }
 }
