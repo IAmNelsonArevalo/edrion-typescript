@@ -1,0 +1,92 @@
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+    Edrion,
+    type EdrionCapabilities,
+    type EdrionExecutionContext,
+    type EdrionHealthReport,
+    type EdrionRuntimeInfo,
+    type EdrionRuntimeMetricsSnapshot,
+    type EdrionReleaseInfo,
+    type EdrionRuntimeStatus,
+    type NormalizedEdrionOptions,
+} from '@edrion/core';
+import { EDRION_INSTANCE } from '@nest/constants/edrion.constants';
+
+/** Official NestJS service exposing the Edrion runtime. */
+@Injectable()
+export class EdrionService implements OnModuleInit, OnModuleDestroy {
+    public constructor(
+        @Inject(EDRION_INSTANCE)
+        private readonly edrion: Edrion,
+    ) {}
+
+    /** Initializes Edrion with the NestJS lifecycle. */
+    public async onModuleInit(): Promise<void> {
+        await this.edrion.initialize();
+    }
+
+    /** Shuts Edrion down with the NestJS lifecycle. */
+    public async onModuleDestroy(): Promise<void> {
+        await this.edrion.shutdown();
+    }
+
+    /** Returns the underlying runtime. */
+    public getRuntime(): Edrion {
+        return this.edrion;
+    }
+
+    /** Returns normalized runtime configuration. */
+    public getOptions(): NormalizedEdrionOptions {
+        return this.edrion.getOptions();
+    }
+
+    /** Returns the runtime execution context. */
+    public getExecutionContext(): EdrionExecutionContext {
+        return this.edrion.getExecutionContext();
+    }
+
+    /** Returns current lifecycle status. */
+    public getStatus(): EdrionRuntimeStatus {
+        return this.edrion.getStatus();
+    }
+
+    /** Returns runtime lifecycle metrics. */
+    public getMetrics(): EdrionRuntimeMetricsSnapshot {
+        return this.edrion.getMetrics();
+    }
+
+    /** Returns complete runtime diagnostics. */
+    public getRuntimeInfo(): EdrionRuntimeInfo {
+        return this.edrion.getRuntimeInfo();
+    }
+
+    /** Returns the current Edrion version. */
+    public getVersion(): string {
+        return this.edrion.getVersion();
+    }
+
+    /** Returns stable release metadata. */
+    public getReleaseInfo(): EdrionReleaseInfo {
+        return this.edrion.getReleaseInfo();
+    }
+
+    /** Returns capabilities supported by the installed Edrion release. */
+    public getCapabilities(): EdrionCapabilities {
+        return this.edrion.getCapabilities();
+    }
+
+    /** Returns a health report suitable for NestJS health endpoints. */
+    public getHealthReport(): EdrionHealthReport {
+        return this.edrion.getHealthReport();
+    }
+
+    /** Compatibility API retained from FEATURE-000. */
+    public isInitialized(): boolean {
+        return this.edrion.isInitialized();
+    }
+
+    /** Indicates whether Edrion is ready to execute work. */
+    public isReady(): boolean {
+        return this.edrion.isReady();
+    }
+}

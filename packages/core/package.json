@@ -1,0 +1,28 @@
+{
+    "name": "@edrion/core",
+    "version": "1.0.0",
+    "description": "Framework-independent core for Edrion",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.cjs"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "typecheck": "tsc -p tsconfig.build.json --noEmit",
+        "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
+        "test": "vitest run",
+        "lint": "eslint src test",
+        "clean": "rm -rf dist coverage"
+    }
+}
