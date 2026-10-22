@@ -1,6 +1,6 @@
 {
     "name": "@edrion/core",
-    "version": "0.10.0",
+    "version": "1.0.0",
     "description": "Framework-independent core for Edrion",
     "license": "MIT",
     "type": "module",
