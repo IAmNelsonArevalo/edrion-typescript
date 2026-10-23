@@ -3,6 +3,7 @@ import type { Loss } from '@core/losses/loss';
 import type { Module } from '@core/nn/module';
 import type { LearningRateScheduler } from '@core/optim/schedulers';
 import type { Optimizer } from '@core/optim/optimizer';
+import type { LossScaler, PrecisionPolicy } from '@core/precision';
 import { clipGradientsByGlobalNorm, computeGlobalGradientNorm } from '@core/stability';
 import { Tensor } from '@core/tensor/tensor';
 import {
@@ -34,6 +35,8 @@ export interface TrainerCallbacks {
 export interface TrainerOptions {
     readonly scheduler?: LearningRateScheduler;
     readonly validationData?: TrainingDataSource;
+    readonly precisionPolicy?: PrecisionPolicy;
+    readonly lossScaler?: LossScaler;
 }
 
 /** Advanced supervised trainer with accumulation, scheduling and evaluation. */
@@ -41,6 +44,8 @@ export class Trainer {
     private readonly config: NormalizedTrainingConfig;
     private readonly scheduler: LearningRateScheduler | undefined;
     private readonly validationData: TrainingDataSource | undefined;
+    private readonly precisionPolicy: PrecisionPolicy | undefined;
+    private readonly lossScaler: LossScaler | undefined;
     private stateInternal: TrainingState = { epoch: 0, globalStep: 0, completed: false };
 
     public constructor(
@@ -53,6 +58,8 @@ export class Trainer {
         this.config = normalizeTrainingConfig(config);
         this.scheduler = options.scheduler;
         this.validationData = options.validationData;
+        this.precisionPolicy = options.precisionPolicy;
+        this.lossScaler = options.lossScaler;
     }
 
     public get state(): TrainingState {
@@ -119,7 +126,9 @@ export class Trainer {
         try {
             for (const batch of loader.batches(0)) {
                 const { input, target } = this.stackBatch(batch);
-                const prediction: Tensor = this.model.forward(input);
+                const modelInput: Tensor = this.precisionPolicy?.castInput(input) ?? input;
+                const predictionRaw: Tensor = this.model.forward(modelInput);
+                const prediction: Tensor = this.precisionPolicy?.castOutput(predictionRaw) ?? predictionRaw;
                 const batchLoss: Tensor = this.loss.forward(prediction, target);
                 const scalarLoss: number = batchLoss.get();
                 if (!Number.isFinite(scalarLoss)) {
@@ -211,7 +220,9 @@ export class Trainer {
         }
         const startedAt: number = Date.now();
         const { input, target } = this.stackBatch(batch);
-        const prediction: Tensor = this.model.forward(input);
+        const modelInput: Tensor = this.precisionPolicy?.castInput(input) ?? input;
+        const predictionRaw: Tensor = this.model.forward(modelInput);
+        const prediction: Tensor = this.precisionPolicy?.castOutput(predictionRaw) ?? predictionRaw;
         const batchLoss: Tensor = this.loss.forward(prediction, target);
         const scalarLoss: number = batchLoss.get();
         if (!Number.isFinite(scalarLoss)) {
@@ -219,11 +230,21 @@ export class Trainer {
                 `Training loss is not finite at epoch ${epochNumber}, batch ${batch.batchIndex}. Received ${scalarLoss}.`,
             );
         }
-        batchLoss.backward();
+        const backwardLoss: Tensor = this.lossScaler?.scaleLoss(batchLoss) ?? batchLoss;
+        backwardLoss.backward();
 
         let gradientNorm: number | undefined;
+        let skippedOptimizerStep: boolean = false;
+        let lossScale: number | undefined = this.lossScaler?.scale;
         if (shouldStep) {
-            if (accumulationCount > 1) {
+            const foundNonFinite: boolean = this.lossScaler?.unscale(this.optimizer.parameters) ?? false;
+            if (foundNonFinite) {
+                this.optimizer.zeroGrad();
+                const update = this.lossScaler?.update(true);
+                lossScale = update?.scale;
+                skippedOptimizerStep = true;
+            }
+            if (!skippedOptimizerStep && accumulationCount > 1) {
                 const scale: number = 1 / accumulationCount;
                 const parameters = this.optimizer.parameters;
                 for (let index: number = 0; index < parameters.length; index += 1) {
@@ -234,19 +255,23 @@ export class Trainer {
                     parameter.scaleGradient(scale);
                 }
             }
-            if (this.config.maxGradientNorm !== undefined) {
-                gradientNorm = clipGradientsByGlobalNorm(
-                    this.optimizer.parameters,
-                    this.config.maxGradientNorm,
-                ).totalNorm;
-            } else {
-                gradientNorm = computeGlobalGradientNorm(this.optimizer.parameters);
+            if (!skippedOptimizerStep) {
+                if (this.config.maxGradientNorm !== undefined) {
+                    gradientNorm = clipGradientsByGlobalNorm(
+                        this.optimizer.parameters,
+                        this.config.maxGradientNorm,
+                    ).totalNorm;
+                } else {
+                    gradientNorm = computeGlobalGradientNorm(this.optimizer.parameters);
+                }
+                const nextStep: number = this.stateInternal.globalStep + 1;
+                this.scheduler?.step(nextStep);
+                this.optimizer.step();
+                this.optimizer.zeroGrad();
+                this.lossScaler?.update(false);
+                lossScale = this.lossScaler?.scale;
+                this.stateInternal = { epoch: this.stateInternal.epoch, globalStep: nextStep, completed: false };
             }
-            const nextStep: number = this.stateInternal.globalStep + 1;
-            this.scheduler?.step(nextStep);
-            this.optimizer.step();
-            this.optimizer.zeroGrad();
-            this.stateInternal = { epoch: this.stateInternal.epoch, globalStep: nextStep, completed: false };
         }
 
         return {
@@ -255,9 +280,11 @@ export class Trainer {
             samples: batch.samples.length,
             loss: scalarLoss,
             durationMs: Math.max(0, Date.now() - startedAt),
-            optimizerStep: shouldStep,
+            optimizerStep: shouldStep && !skippedOptimizerStep,
             learningRate: this.optimizer.learningRate,
             ...(gradientNorm === undefined ? {} : { gradientNorm }),
+            ...(lossScale === undefined ? {} : { lossScale }),
+            ...(skippedOptimizerStep ? { skippedOptimizerStep: true } : {}),
         };
     }
 

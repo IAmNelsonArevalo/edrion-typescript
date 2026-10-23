@@ -196,3 +196,7 @@ generation:inference-metrics
 Edrion v1.7.0 introduces the first GPU execution backend. CPU remains the default for backwards compatibility, while `webgpu` can be selected explicitly in compatible runtimes. The release includes framework-managed adapter/device lifecycle, WGSL vector addition and matrix multiplication kernels, asynchronous dispatch/readback through `WebGPUKernelExecutor`, and backend metrics.
 
 The existing synchronous Tensor API intentionally remains CPU-resident in this release; FEATURE-017 establishes the correct asynchronous GPU boundary before later device-resident tensor storage and automatic kernel routing.
+
+## v1.8.0 — Mixed Precision
+
+Edrion v1.8.0 adds the mixed-precision foundation required for larger language-model training: logical `float16`/`bfloat16`, dtype-aware quantization, differentiable casting, precision policies and dynamic loss scaling. `float32` remains the default and native GPU-resident reduced-precision tensor storage is intentionally deferred to future backend/tensor integration work.

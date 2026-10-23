@@ -8,6 +8,8 @@ export interface BatchMetrics {
     readonly optimizerStep: boolean;
     readonly learningRate: number;
     readonly gradientNorm?: number;
+    readonly lossScale?: number;
+    readonly skippedOptimizerStep?: boolean;
 }
 
 /** Evaluation metrics for one validation pass. */
