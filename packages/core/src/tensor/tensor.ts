@@ -444,7 +444,11 @@ export class Tensor {
      *
      * Supports [sequence, features] and [batch, sequence, features] tensors.
      */
-    public applyRotaryPositionEmbedding(rotaryDimension: number, base: number = 10_000): Tensor {
+    public applyRotaryPositionEmbedding(
+        rotaryDimension: number,
+        base: number = 10_000,
+        positionOffset: number = 0,
+    ): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
             throw new TensorShapeError(`RoPE expects rank 2 or rank 3 input. Received rank ${this.rank}.`);
         }
@@ -471,6 +475,11 @@ export class Tensor {
         if (!Number.isFinite(base) || base <= 1) {
             throw new TensorDataError(`RoPE base must be finite and greater than 1. Received ${base}.`);
         }
+        if (!Number.isInteger(positionOffset) || positionOffset < 0) {
+            throw new TensorDataError(
+                `RoPE positionOffset must be a non-negative integer. Received ${positionOffset}.`,
+            );
+        }
 
         const inputData: Float32Array = this.toFloat32Array();
         const resultData: Float32Array = new Float32Array(inputData);
@@ -483,7 +492,7 @@ export class Tensor {
                 for (let pairStart: number = 0; pairStart < rotaryDimension; pairStart += 2) {
                     const pairIndex: number = pairStart / 2;
                     const inverseFrequency: number = Math.pow(base, -(2 * pairIndex) / rotaryDimension);
-                    const angle: number = position * inverseFrequency;
+                    const angle: number = (positionOffset + position) * inverseFrequency;
                     const cosine: number = Math.cos(angle);
                     const sine: number = Math.sin(angle);
                     const leftIndex: number = rowOffset + pairStart;
@@ -511,7 +520,7 @@ export class Tensor {
                     for (let pairStart: number = 0; pairStart < rotaryDimension; pairStart += 2) {
                         const pairIndex: number = pairStart / 2;
                         const inverseFrequency: number = Math.pow(base, -(2 * pairIndex) / rotaryDimension);
-                        const angle: number = position * inverseFrequency;
+                        const angle: number = (positionOffset + position) * inverseFrequency;
                         const cosine: number = Math.cos(angle);
                         const sine: number = Math.sin(angle);
                         const leftIndex: number = rowOffset + pairStart;

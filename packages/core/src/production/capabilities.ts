@@ -1,4 +1,4 @@
-/** Stable capability identifiers exposed by Edrion v1.5.0. */
+/** Stable capability identifiers exposed by Edrion v1.6.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
@@ -7,6 +7,9 @@ export type EdrionCapability =
     | 'data:dataset'
     | 'data:dataloader'
     | 'generation'
+    | 'generation:kv-cache'
+    | 'generation:streaming'
+    | 'generation:inference-metrics'
     | 'losses'
     | 'neural-network'
     | 'numerical-safety'
@@ -57,13 +60,16 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'transformer:swiglu',
     'transformer:modern-architecture',
     'generation',
+    'generation:kv-cache',
+    'generation:streaming',
+    'generation:inference-metrics',
     'training',
     'training:batched-data',
     'serialization',
     'numerical-safety',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.5.0. */
+/** Returns the stable capabilities available in Edrion v1.6.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],
