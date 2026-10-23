@@ -19,6 +19,7 @@ export * from './metrics';
 export * from './nn';
 export * from './optim';
 export * from './production';
+export * from './precision';
 export * from './runtime';
 export * from './stability';
 export * from './tensor';

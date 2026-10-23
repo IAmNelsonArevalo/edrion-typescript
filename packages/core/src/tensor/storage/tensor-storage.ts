@@ -1,3 +1,4 @@
+import { quantizeToDType, type DType } from '@core/tensor/dtype';
 import { TensorDataError, TensorIndexError } from '@core/tensor/tensor.errors';
 
 /** Accepted input data for tensor storage. */
@@ -8,14 +9,25 @@ export class TensorStorage {
     private readonly values: Float32Array;
 
     /** Creates independent tensor storage. */
-    public constructor(data: TensorData, expectedSize: number) {
+    public constructor(
+        data: TensorData,
+        expectedSize: number,
+        private readonly dtype: DType = 'float32',
+    ) {
         if (data.length !== expectedSize) {
             throw new TensorDataError(
                 `Tensor data length ${data.length} does not match expected tensor size ${expectedSize}.`,
             );
         }
 
-        this.values = new Float32Array(data);
+        this.values = new Float32Array(expectedSize);
+        for (let index: number = 0; index < expectedSize; index += 1) {
+            const value: number | undefined = data[index];
+            if (value === undefined) {
+                throw new TensorDataError(`Missing tensor storage value at offset ${index}.`);
+            }
+            this.values[index] = quantizeToDType(value, this.dtype);
+        }
     }
 
     /** Number of scalar values stored. */
@@ -39,7 +51,7 @@ export class TensorStorage {
     /** Updates a scalar value at a flat offset. */
     public set(offset: number, value: number): void {
         this.assertValidOffset(offset);
-        this.values[offset] = value;
+        this.values[offset] = quantizeToDType(value, this.dtype);
     }
 
     /** Returns an independent Float32Array copy. */
@@ -54,7 +66,7 @@ export class TensorStorage {
 
     /** Creates an independent clone. */
     public clone(): TensorStorage {
-        return new TensorStorage(this.values, this.values.length);
+        return new TensorStorage(this.values, this.values.length, this.dtype);
     }
 
     private assertValidOffset(offset: number): void {

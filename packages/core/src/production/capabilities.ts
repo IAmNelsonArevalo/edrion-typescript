@@ -1,4 +1,4 @@
-/** Stable capability identifiers exposed by Edrion v1.7.0. */
+/** Stable capability identifiers exposed by Edrion v1.8.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
@@ -15,6 +15,10 @@ export type EdrionCapability =
     | 'losses'
     | 'neural-network'
     | 'numerical-safety'
+    | 'precision:mixed'
+    | 'precision:float16'
+    | 'precision:bfloat16'
+    | 'training:loss-scaling'
     | 'optimizers'
     | 'optimizers:adamw'
     | 'training:lr-schedulers'
@@ -71,9 +75,13 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'training:batched-data',
     'serialization',
     'numerical-safety',
+    'precision:mixed',
+    'precision:float16',
+    'precision:bfloat16',
+    'training:loss-scaling',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.7.0. */
+/** Returns the stable capabilities available in Edrion v1.8.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],

@@ -100,7 +100,7 @@ export class Tensor {
         this.tensorRequiresGrad = requiresGrad;
         this.parents = [...parents];
         this.backwardFunction = backwardFunction;
-        this.storage = new TensorStorage(data, size);
+        this.storage = new TensorStorage(data, size, dtype);
     }
 
     public get shape(): TensorShape {
@@ -152,6 +152,26 @@ export class Tensor {
             dtype: this.tensorDType,
             backend: this.tensorBackend,
         });
+    }
+
+    /** Casts this tensor to another logical precision while preserving Autograd. */
+    public cast(dtype: DType): Tensor {
+        assertSupportedDType(dtype);
+        if (dtype === this.tensorDType) {
+            return this.clone();
+        }
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            if (this.tensorRequiresGrad) {
+                this.accumulateGradient(gradient);
+            }
+        };
+        return new Tensor(
+            this.toFloat32Array(),
+            this.tensorShape,
+            { dtype, backend: this.tensorBackend, requiresGrad: this.tensorRequiresGrad },
+            this.tensorRequiresGrad ? [this] : [],
+            this.tensorRequiresGrad ? backward : undefined,
+        );
     }
 
     /**
