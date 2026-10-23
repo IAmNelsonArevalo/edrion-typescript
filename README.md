@@ -1,208 +1,212 @@
-# Edrion TypeScript — FEATURE-004 / v0.5.0
+# Edrion TypeScript — v1.7.0
 
-Edrion is a TypeScript-first AI and deep-learning framework designed around a framework-independent mathematical core.
-
-FEATURE-004 introduces the first neural-network abstraction layer on top of the differentiable Tensor engine delivered in FEATURE-003.
+Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, batched Transformer stack, Dataset/DataLoader pipeline, BPE tokenization, training, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v0.5.0 — FEATURE-004: Neural Network Core`
+`v1.7.0 — FEATURE-017: WebGPU Backend`
 
-## Included in FEATURE-004
+## KV Cache + Streaming Generation
 
-### Module system
+FEATURE-016 adds efficient incremental inference for modern Transformer models. Per-layer K/V projections are cached between generated tokens, RoPE receives the correct absolute position offset, and `TextGenerator.stream()` exposes token events as generation progresses.
 
-- `Module`
-- recursive parameter registration
-- child-module registration
-- `parameters()`
-- `namedParameters()`
-- `zeroGrad()`
-- recursive `train()` / `eval()` modes
+Generation results now include inference metrics such as generated tokens, duration, tokens per second, model forward calls and cache rebuilds. Legacy Transformer generation remains available unchanged.
 
-### Trainable parameters
+## Advanced Training Engine
 
-- `Parameter extends Tensor`
-- `requiresGrad: true` by construction
-- compatible with FEATURE-003 autograd
+FEATURE-015 adds the optimization and evaluation primitives required for serious language-model pretraining:
 
-### Layers
+- AdamW with decoupled weight decay
+- runtime-adjustable learning rates
+- linear warmup, cosine decay, and warmup + cosine schedules
+- gradient accumulation across real tensor batches
+- optional global-norm gradient clipping
+- validation/evaluation loops
+- training, validation, learning-rate, and gradient-norm metrics
 
-- `Linear`
-- `Embedding`
-- `LayerNormalization`
+The existing Transformer, BPE tokenizer, Dataset/DataLoader and serialization stack remain available unchanged.
 
-### Activations
+## Modern Transformer Foundation
 
-- `ReLU`
-- `Sigmoid`
-- `Tanh`
-- `GELU`
-- `Softmax`
-
-### Tensor addition
-
-FEATURE-004 adds an exact differentiable `Tensor.relu()` primitive so ReLU does not rely on an unstable approximation.
-
-## Linear
-
-```ts
-import { Linear, Tensor } from '@edrion/core';
-
-const layer: Linear = new Linear(4, 8);
-
-const input: Tensor = new Tensor([1, 2, 3, 4, 5, 6, 7, 8], [2, 4], {
-    requiresGrad: true,
-});
-
-const output: Tensor = layer.forward(input);
-const loss: Tensor = output.mean();
-
-loss.backward();
-
-console.log(layer.weight.grad?.shape);
-```
-
-## Embedding
-
-Embedding receives integer token IDs represented by a Tensor and returns dense vectors while preserving gradients for the embedding matrix.
-
-```ts
-import { Embedding, Tensor } from '@edrion/core';
-
-const embedding: Embedding = new Embedding(1000, 128);
-
-const tokenIds: Tensor = new Tensor([10, 24, 10, 99], [4]);
-
-const vectors: Tensor = embedding.forward(tokenIds);
-
-console.log(vectors.shape);
-// [4, 128]
-```
-
-## Layer Normalization
-
-```ts
-import { LayerNormalization, Tensor } from '@edrion/core';
-
-const normalization: LayerNormalization = new LayerNormalization(128);
-
-const output: Tensor = normalization.forward(input);
-```
-
-Layer normalization currently normalizes the final tensor dimension and supports optional affine parameters.
-
-## Activations
-
-```ts
-import { GELU, ReLU, Sigmoid, Softmax, Tanh } from '@edrion/core';
-```
-
-Example:
-
-```ts
-const activation: GELU = new GELU();
-const output: Tensor = activation.forward(input);
-```
-
-## Module Parameters
-
-```ts
-const parameters = model.parameters();
-const namedParameters = model.namedParameters();
-
-model.zeroGrad();
-model.train();
-model.eval();
-```
-
-Nested modules are traversed recursively.
-
-## Architecture
+FEATURE-014 moves Edrion closer to the architecture required by the future Edrion LM.
 
 ```text
-@edrion/core
-│
-├── autograd
-├── backend
-├── metrics
-├── runtime
-├── tensor
-│   ├── operations
-│   └── autograd-enabled Tensor
-│
-└── nn
-    ├── Module
-    ├── Parameter
-    ├── layers
-    │   ├── Linear
-    │   ├── Embedding
-    │   └── LayerNormalization
-    └── activations
-        ├── ReLU
-        ├── Sigmoid
-        ├── Tanh
-        ├── GELU
-        └── Softmax
+Token IDs
+   ↓
+Token Embedding
+   ↓
+Modern Transformer Blocks × N
+   ├─ RMSNorm
+   ├─ Multi-Head Attention
+   │    └─ RoPE on Q/K
+   ├─ Residual
+   ├─ RMSNorm
+   ├─ SwiGLU
+   └─ Residual
+   ↓
+Final RMSNorm
+   ↓
+Language Model Head
+   ↓
+Vocabulary Logits
 ```
 
-## Important Design Decisions
+### RoPE
 
-- Neural-network layers reuse Tensor operations and autograd instead of implementing a second gradient engine.
-- `Linear` uses `matmul()` plus broadcasting from FEATURE-003.
-- `Embedding` uses one-hot projection through `matmul()` so gradients naturally accumulate into its trainable weight matrix.
-- `LayerNormalization` is composed from differentiable Tensor operations.
-- Softmax numerical stabilization is intentionally reserved for FEATURE-009, where numerical-safety policies are introduced consistently across the framework.
+Modern attention uses Rotary Position Embeddings instead of learned absolute positional embeddings. Edrion's RoPE implementation is differentiable and supports both:
+
+```text
+[sequence, headDimension]
+[batch, sequence, headDimension]
+```
+
+### RMSNorm
+
+Modern blocks replace LayerNorm with RMSNorm, using a trainable scaling parameter and normalization over the final feature dimension.
+
+### SwiGLU
+
+The modern feed-forward path is:
+
+```text
+gate = SiLU(Wgate(x))
+up   = Wup(x)
+out  = Wdown(gate * up)
+```
+
+### Compatibility
+
+For v1.x backward compatibility, `TransformerModel` keeps the legacy default. Enable the new architecture explicitly with:
+
+```ts
+architecture: 'modern';
+```
+
+The previous path remains available as:
+
+```ts
+architecture: 'legacy';
+```
+
+## Production capabilities added in v1.4.0
+
+```text
+transformer:rope
+transformer:rmsnorm
+transformer:swiglu
+transformer:modern-architecture
+```
+
+## Validation
+
+```text
+Core strict TypeScript typecheck    PASS
+RoPE forward/backward               PASS
+Batched RoPE                        PASS
+RMSNorm                             PASS
+SwiGLU                              PASS
+Modern batched Transformer          PASS
+Full Transformer backward           PASS
+Legacy compatibility                PASS
+```
+
+See:
+
+```text
+FEATURE-014.md
+FEATURE-014-VALIDATION.md
+PR-FEATURE-014.md
+```
+
+## Packages
+
+```text
+@edrion/core        1.7.0
+@edrion/nestjs      1.7.0
+edrion-typescript   1.7.0
+@edrion/nest-lab    1.7.0
+```
 
 ## Branch
 
 ```bash
-git switch -c EDR-TS/feature/004-neural-network-core
+git switch -c EDR-TS/feature/014-modern-transformer
 ```
 
 ## Commit
 
 ```bash
 git add .
-git commit -m "feat(EDR-TS-004): add neural network core"
-```
-
-## Pull Request
-
-```text
-EDR-TS-004: Neural Network Core
+git commit -m "feat(EDR-TS-014): modernize transformer architecture"
 ```
 
 ## Quality Gate
 
 ```bash
 pnpm install
-pnpm typecheck
-pnpm typecheck:test
-pnpm lint
-pnpm test
-pnpm build
 pnpm check
 ```
 
-## Feature Roadmap
+## Roadmap
 
-| Version | Feature                                          | Status  |
-| ------- | ------------------------------------------------ | ------- |
-| v0.1.0  | FEATURE-000 — NestJS / Monorepo Foundation       | ✅      |
-| v0.2.0  | FEATURE-001 — Core Runtime + Backend Abstraction | ✅      |
-| v0.3.0  | FEATURE-002 — Tensor Core                        | ✅      |
-| v0.4.0  | FEATURE-003 — Tensor Operations + Autograd       | ✅      |
-| v0.5.0  | FEATURE-004 — Neural Network Core                | ✅      |
-| v0.6.0  | FEATURE-005 — Losses + Optimizers                | Next    |
-| v0.7.0  | FEATURE-006 — Transformer Foundation             | Planned |
-| v0.8.0  | FEATURE-007 — Tokenizer + Generation             | Planned |
-| v0.9.0  | FEATURE-008 — Training + Serialization           | Planned |
-| v0.10.x | FEATURE-009 — Stability Lab + Numerical Safety   | Planned |
-| v1.0.0  | FEATURE-010 — Production Foundation              | Planned |
+| Version | Feature                                        | Status  |
+| ------- | ---------------------------------------------- | ------- |
+| v1.0.0  | FEATURE-010 — Production Foundation            | ✅      |
+| v1.1.0  | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅      |
+| v1.2.0  | FEATURE-012 — Dataset + DataLoader             | ✅      |
+| v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | ✅      |
+| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | ✅      |
+| v1.5.0  | FEATURE-015 — Advanced Training Engine         | ✅      |
+| v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | ✅      |
+| v1.7.0  | FEATURE-017 — WebGPU Backend                   | Next    |
+| v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
+| v1.9.0  | FEATURE-019 — Large Model Infrastructure       | Planned |
+| v2.0.0  | Edrion Language Model Foundation               | Planned |
 
-## Version
+# Edrion Nest Lab
 
-- `@edrion/core`: `0.5.0`
-- `@edrion/nestjs`: `0.5.0`
-- `edrion-typescript`: `0.5.0`
+Executable NestJS consumer used by Edrion's integration QA.
+
+It validates that `@edrion/nestjs` works outside its own package boundary, including dependency injection, module lifecycle, runtime initialization, health reporting and shutdown.
+
+```bash
+pnpm --filter @edrion/nest-lab test
+pnpm --filter @edrion/nest-lab build
+```
+
+## Production capabilities added in v1.5.0
+
+```text
+optimizers:adamw
+training:lr-schedulers
+training:gradient-accumulation
+training:evaluation
+```
+
+## Production capabilities added in v1.6.0
+
+```text
+generation:kv-cache
+generation:streaming
+generation:inference-metrics
+```
+
+## FEATURE-017 — WebGPU Backend
+
+Edrion v1.7.0 introduces the first GPU execution backend. CPU remains the default for backwards compatibility, while `webgpu` can be selected explicitly in compatible runtimes. The release includes framework-managed adapter/device lifecycle, WGSL vector addition and matrix multiplication kernels, asynchronous dispatch/readback through `WebGPUKernelExecutor`, and backend metrics.
+
+The existing synchronous Tensor API intentionally remains CPU-resident in this release; FEATURE-017 establishes the correct asynchronous GPU boundary before later device-resident tensor storage and automatic kernel routing.
+
+## v1.8.0 — Mixed Precision
+
+Edrion v1.8.0 adds the mixed-precision foundation required for larger language-model training: logical `float16`/`bfloat16`, dtype-aware quantization, differentiable casting, precision policies and dynamic loss scaling. `float32` remains the default and native GPU-resident reduced-precision tensor storage is intentionally deferred to future backend/tensor integration work.
+
+## v1.9.0 — Large Model Infrastructure
+
+FEATURE-019 adds sharded model state, model-memory profiling, conservative memory planning and performance profiling as the final v1.x infrastructure step before Edrion v2.0.0.
+
+# Edrion v2.0.0 — Language Model Foundation
+
+Edrion v2 can now express the end-to-end framework pipeline for a GPT-style decoder-only language model: BPE tokenization, causal next-token datasets, modern Transformer blocks (RoPE/RMSNorm/SwiGLU), batched training, AdamW with warmup/cosine scheduling, validation/perplexity, checkpoints/sharding, KV-cache generation, mixed precision foundations and WebGPU compute kernels.
+
+The framework and the trained model are intentionally separate: `edrion-typescript` supplies the infrastructure; future Edrion model artifacts provide pretrained weights.

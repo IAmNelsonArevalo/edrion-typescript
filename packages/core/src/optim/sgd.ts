@@ -19,20 +19,18 @@ export interface SGDOptions {
  * Stochastic gradient descent optimizer with optional momentum.
  */
 export class SGD extends Optimizer {
-    public readonly learningRate: number;
     public readonly momentum: number;
 
     private readonly velocity: Map<Parameter, Float32Array> = new Map<Parameter, Float32Array>();
 
     public constructor(parameters: readonly Parameter[], options: SGDOptions) {
-        super(parameters);
+        super(parameters, options.learningRate);
 
         assertPositiveFinite(options.learningRate, 'SGD learningRate');
 
         const momentum: number = options.momentum ?? 0;
         assertUnitIntervalExclusiveOne(momentum, 'SGD momentum');
 
-        this.learningRate = options.learningRate;
         this.momentum = momentum;
     }
 

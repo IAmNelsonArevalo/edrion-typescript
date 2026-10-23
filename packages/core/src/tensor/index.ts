@@ -1,4 +1,13 @@
-export { DEFAULT_DTYPE, SUPPORTED_DTYPES, assertSupportedDType, isSupportedDType, type DType } from './dtype';
+export {
+    DEFAULT_DTYPE,
+    SUPPORTED_DTYPES,
+    assertSupportedDType,
+    isSupportedDType,
+    quantizeBFloat16,
+    quantizeFloat16,
+    quantizeToDType,
+    type DType,
+} from './dtype';
 
 export {
     broadcastShapes,

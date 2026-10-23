@@ -1,7 +1,7 @@
 import { TensorDTypeError } from '@core/tensor/tensor.errors';
 
-/** Data types currently supported by Edrion tensors. */
-export const SUPPORTED_DTYPES = ['float32'] as const;
+/** Data types supported by Edrion tensors. */
+export const SUPPORTED_DTYPES = ['float32', 'float16', 'bfloat16'] as const;
 
 /** Supported tensor data type. */
 export type DType = (typeof SUPPORTED_DTYPES)[number];

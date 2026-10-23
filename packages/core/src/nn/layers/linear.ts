@@ -56,8 +56,8 @@ export class Linear extends Module {
     }
 
     public override forward(input: Tensor): Tensor {
-        if (input.rank !== 1 && input.rank !== 2) {
-            throw new LayerShapeError(`Linear.forward() expects rank 1 or 2 input. Received rank ${input.rank}.`);
+        if (input.rank < 1) {
+            throw new LayerShapeError(`Linear.forward() expects rank >= 1 input. Received rank ${input.rank}.`);
         }
 
         const shape: readonly number[] = input.shape;
@@ -80,19 +80,16 @@ export class Linear extends Module {
             );
         }
 
-        const matrixInput: Tensor = input.rank === 1 ? input.reshape([1, this.inFeatures]) : input;
-
+        const rowCount: number = input.size / this.inFeatures;
+        const matrixInput: Tensor = input.reshape([rowCount, this.inFeatures]);
         let output: Tensor = matrixInput.matmul(this.weight);
 
         if (this.bias !== undefined) {
             output = output.add(this.bias);
         }
 
-        if (input.rank === 1) {
-            return output.reshape([this.outFeatures]);
-        }
-
-        return output;
+        const outputShape: number[] = [...shape.slice(0, -1), this.outFeatures];
+        return output.reshape(outputShape);
     }
 }
 
