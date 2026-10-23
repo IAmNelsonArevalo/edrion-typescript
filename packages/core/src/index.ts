@@ -1,5 +1,6 @@
 export * from './autograd';
 export * from './backend';
+export * from './data';
 export * from './generation';
 
 export {
@@ -14,10 +15,13 @@ export {
 } from './config/edrion-options';
 
 export * from './losses';
+export * from './large-model';
+export * from './language-model';
 export * from './metrics';
 export * from './nn';
 export * from './optim';
 export * from './production';
+export * from './precision';
 export * from './runtime';
 export * from './stability';
 export * from './tensor';

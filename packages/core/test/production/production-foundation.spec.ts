@@ -13,8 +13,8 @@ describe('Production Foundation', (): void => {
     it('should expose stable release information', (): void => {
         const release: EdrionReleaseInfo = getEdrionReleaseInfo();
 
-        expect(EDRION_VERSION).toBe('1.0.0');
-        expect(release.version).toBe('1.0.0');
+        expect(EDRION_VERSION).toBe('2.0.0');
+        expect(release.version).toBe(EDRION_VERSION);
         expect(release.channel).toBe('stable');
         expect(release.apiStability).toBe('stable');
     });
@@ -27,6 +27,8 @@ describe('Production Foundation', (): void => {
         expect(capabilities.capabilities).toContain('transformer');
         expect(capabilities.capabilities).toContain('training');
         expect(capabilities.capabilities).toContain('numerical-safety');
+        expect(capabilities.capabilities).toContain('tokenizer:bpe');
+        expect(capabilities.capabilities).toContain('tokenizer:dataset');
     });
 
     it('should report not-ready before initialization', (): void => {
