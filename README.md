@@ -1,126 +1,154 @@
-# Edrion TypeScript — v1.1.0
+# Edrion TypeScript — v1.3.0
 
-Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, Transformer stack, training pipeline, serialization and numerical-safety layer.
+Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, Transformer stack, data/training pipeline, tokenization, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v1.1.0 — FEATURE-011: QA Fixes + Batched Tensor Engine`
+`v1.3.0 — FEATURE-013: Advanced Tokenization / BPE`
 
-## FEATURE-011 goals
+## FEATURE-013 goals
 
-FEATURE-011 closes the two QA gaps detected in v1.0.0 and removes one of the largest architectural limits in the first stable release: Transformer execution was restricted to one sequence at a time.
+FEATURE-013 introduces Edrion's first trainable subword tokenizer and connects text corpora directly to the Dataset/DataLoader pipeline.
 
-### QA fixes
+### BPE owned by Edrion
 
-- pins an exact Corepack-compatible pnpm version with `packageManager: "pnpm@10.0.0"`;
-- adds `scripts/verify-package-manager.mjs` and makes it part of `pnpm check`;
-- converts `apps/nest-lab` from documentation-only scaffolding into a real executable NestJS consumer;
-- adds a NestJS integration test covering DI, initialization, health reporting and shutdown.
-
-### Batched Tensor Engine
-
-`Tensor.matmul()` now supports:
+Core now exposes:
 
 ```text
-[M, K] @ [K, N]             -> [M, N]
-[B, M, K] @ [B, K, N]       -> [B, M, N]
+BpeTokenizer
+BpeMerge
+BpeTrainingStats
+TokenizedTextDataset
 ```
 
-Batched matmul remains connected to Autograd and computes gradients for both operands.
-
-`Tensor.transpose()` now supports rank-3 batched matrices by swapping their final two dimensions.
-
-`sliceColumns()` and `concatColumns()` now support both rank-2 and rank-3 tensors, preserving Autograd connectivity.
-
-### Batched neural-network execution
-
-`Linear` now accepts any rank greater than or equal to 1 as long as the final dimension matches `inFeatures`. Leading dimensions are preserved.
-
-Examples:
+Unlike the original `BasicTokenizer`, BPE learns its vocabulary from the corpus:
 
 ```text
-[features]                    -> [outFeatures]
-[sequence, features]          -> [sequence, outFeatures]
-[batch, sequence, features]   -> [batch, sequence, outFeatures]
+Corpus
+  ↓
+Unicode alphabet
+  ↓
+Pair frequencies
+  ↓
+Repeated BPE merges
+  ↓
+Subword vocabulary
 ```
 
-### Batched Transformer
+Example:
 
-The Transformer can now execute:
+```ts
+const tokenizer = new BpeTokenizer({
+    targetVocabularySize: 8192,
+    minimumPairFrequency: 2,
+    lowercase: true,
+});
+
+tokenizer.fit(corpus);
+```
+
+### Deterministic training
+
+The same corpus and configuration produce the same merge order and vocabulary. Pair-frequency ties use a deterministic lexical rule.
+
+### Unicode and exact normalized decode
+
+FEATURE-013 operates on Unicode code points and keeps whitespace and punctuation in the symbol stream. This allows encoded text to decode back to the same normalized text without the heuristic spacing rules used by `BasicTokenizer`.
+
+### Dataset integration
+
+Tokenizer training can consume:
 
 ```text
-[sequence]
+Dataset<string>
 ```
 
-and:
+through:
+
+```ts
+tokenizer.fitDataset(dataset);
+```
+
+and text datasets can be adapted lazily:
 
 ```text
-[batch, sequence]
+Dataset<string>
+      ↓
+TokenizedTextDataset
+      ↓
+Dataset<readonly number[]>
 ```
 
-Token input:
+This prepares Edrion for language-model corpus preprocessing without introducing filesystem or Node dependencies into `@edrion/core`.
+
+### Persistence
+
+BPE state includes:
 
 ```text
-[batch, sequence]
+configuration
+vocabulary
+ordered merge table
 ```
 
-becomes:
+and can be serialized/restored for training and inference.
 
-```text
-[batch, sequence, embedding]
-```
+### Compatibility
 
-and finally:
-
-```text
-[batch, sequence, vocabulary]
-```
-
-Multi-head attention and scaled dot-product attention also accept batched hidden states.
+`BasicTokenizer` remains available. `BpeTokenizer` implements the existing `Tokenizer` interface, so the generation engine can consume it directly.
 
 ## Production capabilities
 
-v1.1.0 exposes two additional runtime capabilities:
+v1.3.0 adds:
 
 ```text
-tensor:batched-matmul
-transformer:batched
+tokenizer:bpe
+tokenizer:dataset
 ```
 
-## Validation performed for FEATURE-011
+while preserving all v1.2.0 data and batched-training capabilities.
 
-The FEATURE-011 snapshot was independently compiled with strict TypeScript settings and exercised with a runtime harness that verified:
+## Validation
 
-- rank-3 batched matmul values;
-- batched matmul gradients;
-- rank-3 transpose;
-- batched multi-head attention;
-- gradient propagation through batched attention;
-- Transformer logits with shape `[batch, sequence, vocabulary]`;
-- v1.1.0 production capability metadata.
+FEATURE-013 passed:
 
-The independent runtime harness returned `PASS`.
+```text
+Core strict TypeScript typecheck    PASS
+BPE runtime training                PASS
+Unicode round-trip                  PASS
+Serialization round-trip            PASS
+Dataset integration                 PASS
+Deterministic training              PASS
+```
+
+See:
+
+```text
+FEATURE-013.md
+FEATURE-013-VALIDATION.md
+PR-FEATURE-013.md
+```
 
 ## Packages
 
 ```text
-@edrion/core        1.1.0
-@edrion/nestjs      1.1.0
-edrion-typescript   1.1.0
-@edrion/nest-lab    1.1.0
+@edrion/core        1.3.0
+@edrion/nestjs      1.3.0
+edrion-typescript   1.3.0
+@edrion/nest-lab    1.3.0
 ```
 
 ## Branch
 
 ```bash
-git switch -c EDR-TS/feature/011-batched-tensor-engine
+git switch -c EDR-TS/feature/013-bpe-tokenizer
 ```
 
 ## Commit
 
 ```bash
 git add .
-git commit -m "feat(EDR-TS-011): add batched tensor engine and resolve v1 QA gaps"
+git commit -m "feat(EDR-TS-013): add BPE tokenizer and dataset tokenization"
 ```
 
 ## Quality Gate
@@ -130,17 +158,15 @@ pnpm install
 pnpm check
 ```
 
-`pnpm check` now includes package-manager reproducibility verification and the real NestJS consumer integration suite.
-
 ## Roadmap
 
 | Version | Feature                                        | Status  |
 | ------- | ---------------------------------------------- | ------- |
 | v1.0.0  | FEATURE-010 — Production Foundation            | ✅      |
 | v1.1.0  | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅      |
-| v1.2.0  | FEATURE-012 — Dataset + DataLoader             | Next    |
-| v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | Planned |
-| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | Planned |
+| v1.2.0  | FEATURE-012 — Dataset + DataLoader             | ✅      |
+| v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | ✅      |
+| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | Next    |
 | v1.5.0  | FEATURE-015 — Advanced Training Engine         | Planned |
 | v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | Planned |
 | v1.7.0  | FEATURE-017 — WebGPU Backend                   | Planned |
