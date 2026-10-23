@@ -1,3 +1,12 @@
+/** Metrics produced for one training batch. */
+export interface BatchMetrics {
+    readonly epoch: number;
+    readonly batch: number;
+    readonly samples: number;
+    readonly loss: number;
+    readonly durationMs: number;
+}
+
 /** Metrics produced for one training epoch. */
 export interface EpochMetrics {
     readonly epoch: number;

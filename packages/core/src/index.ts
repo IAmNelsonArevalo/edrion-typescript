@@ -1,5 +1,6 @@
 export * from './autograd';
 export * from './backend';
+export * from './data';
 export * from './generation';
 
 export {

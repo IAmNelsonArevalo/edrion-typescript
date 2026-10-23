@@ -1,9 +1,11 @@
-/** Stable capability identifiers exposed by Edrion v1.1.0. */
+/** Stable capability identifiers exposed by Edrion v1.2.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
     | 'tensor:batched-matmul'
     | 'transformer:batched'
+    | 'data:dataset'
+    | 'data:dataloader'
     | 'generation'
     | 'losses'
     | 'neural-network'
@@ -13,6 +15,7 @@ export type EdrionCapability =
     | 'tensor'
     | 'tokenizer'
     | 'training'
+    | 'training:batched-data'
     | 'transformer';
 
 /** Immutable capability report. */
@@ -26,6 +29,8 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'backend:cpu',
     'tensor:batched-matmul',
     'transformer:batched',
+    'data:dataset',
+    'data:dataloader',
     'neural-network',
     'losses',
     'optimizers',
@@ -33,11 +38,12 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'tokenizer',
     'generation',
     'training',
+    'training:batched-data',
     'serialization',
     'numerical-safety',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.1.0. */
+/** Returns the stable capabilities available in Edrion v1.2.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],
