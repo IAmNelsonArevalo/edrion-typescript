@@ -1,10 +1,10 @@
-# Edrion TypeScript — v1.6.0
+# Edrion TypeScript — v1.7.0
 
 Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, batched Transformer stack, Dataset/DataLoader pipeline, BPE tokenization, training, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v1.6.0 — FEATURE-016: KV Cache + Streaming Generation`
+`v1.7.0 — FEATURE-017: WebGPU Backend`
 
 ## KV Cache + Streaming Generation
 
@@ -121,10 +121,10 @@ PR-FEATURE-014.md
 ## Packages
 
 ```text
-@edrion/core        1.6.0
-@edrion/nestjs      1.6.0
-edrion-typescript   1.6.0
-@edrion/nest-lab    1.6.0
+@edrion/core        1.7.0
+@edrion/nestjs      1.7.0
+edrion-typescript   1.7.0
+@edrion/nest-lab    1.7.0
 ```
 
 ## Branch
@@ -190,3 +190,9 @@ generation:kv-cache
 generation:streaming
 generation:inference-metrics
 ```
+
+## FEATURE-017 — WebGPU Backend
+
+Edrion v1.7.0 introduces the first GPU execution backend. CPU remains the default for backwards compatibility, while `webgpu` can be selected explicitly in compatible runtimes. The release includes framework-managed adapter/device lifecycle, WGSL vector addition and matrix multiplication kernels, asynchronous dispatch/readback through `WebGPUKernelExecutor`, and backend metrics.
+
+The existing synchronous Tensor API intentionally remains CPU-resident in this release; FEATURE-017 establishes the correct asynchronous GPU boundary before later device-resident tensor storage and automatic kernel routing.
