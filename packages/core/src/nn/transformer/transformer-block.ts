@@ -2,7 +2,8 @@ import { LayerNormalization } from '@core/nn/layers/layer-normalization';
 import { RMSNormalization } from '@core/nn/layers/rms-normalization';
 import { Module } from '@core/nn/module';
 import { TransformerFeedForward } from '@core/nn/transformer/feed-forward';
-import { MultiHeadAttention } from '@core/nn/transformer/multi-head-attention';
+import { MultiHeadAttention, type IncrementalAttentionResult } from '@core/nn/transformer/multi-head-attention';
+import type { TransformerLayerKeyValueCache } from '@core/nn/transformer/kv-cache';
 import { SwiGLUFeedForward } from '@core/nn/transformer/swiglu-feed-forward';
 import type { TransformerArchitecture } from '@core/nn/transformer/transformer-config';
 import { Tensor } from '@core/tensor/tensor';
@@ -76,6 +77,27 @@ export class TransformerBlock extends Module {
                       options.backend === undefined ? {} : { backend: options.backend },
                   ),
         );
+    }
+
+    /** Inference-only Transformer block step backed by a KV cache. */
+    public forwardIncremental(
+        input: Tensor,
+        previousCache: TransformerLayerKeyValueCache | undefined,
+        positionOffset: number,
+    ): { readonly output: Tensor; readonly cache: TransformerLayerKeyValueCache } {
+        const normalizedAttentionInput: Tensor = this.attentionNormalization.forward(input);
+        const attentionResult: IncrementalAttentionResult = this.attention.forwardIncremental(
+            normalizedAttentionInput,
+            previousCache,
+            positionOffset,
+        );
+        const afterAttention: Tensor = input.add(attentionResult.output);
+        const normalizedFeedForwardInput: Tensor = this.feedForwardNormalization.forward(afterAttention);
+        const feedForwardOutput: Tensor = this.feedForward.forward(normalizedFeedForwardInput);
+        return {
+            output: afterAttention.add(feedForwardOutput),
+            cache: attentionResult.cache,
+        };
     }
 
     public override forward(input: Tensor): Tensor {

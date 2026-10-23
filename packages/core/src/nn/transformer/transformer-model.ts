@@ -9,10 +9,16 @@ import {
     type TransformerConfig,
 } from '@core/nn/transformer/transformer-config';
 import { TransformerBlock } from '@core/nn/transformer/transformer-block';
+import { TransformerKeyValueCache, type TransformerLayerKeyValueCache } from '@core/nn/transformer/kv-cache';
 import { TransformerError } from '@core/nn/transformer/transformer.errors';
 import { Tensor } from '@core/tensor/tensor';
 
 type FinalNormalization = LayerNormalization | RMSNormalization;
+
+export interface IncrementalTransformerResult {
+    readonly logits: Tensor;
+    readonly cache: TransformerKeyValueCache;
+}
 
 /** Decoder-only Transformer with FEATURE-014 modern architecture support. */
 export class TransformerModel extends Module {
@@ -77,6 +83,70 @@ export class TransformerModel extends Module {
                 backend: this.config.backend,
             }),
         );
+    }
+
+    /** Creates an empty KV cache for incremental inference. */
+    public createKeyValueCache(batchSize: number = 1): TransformerKeyValueCache {
+        if (this.config.architecture !== 'modern') {
+            throw new TransformerError('KV cache requires the modern Transformer architecture.');
+        }
+        return new TransformerKeyValueCache(
+            this.config.numberOfLayers,
+            this.config.contextLength,
+            this.config.backend,
+            batchSize,
+        );
+    }
+
+    /**
+     * Performs one incremental inference step and updates the supplied cache.
+     * Tokens must represent exactly one position: [1] or [batch, 1].
+     */
+    public forwardIncremental(tokens: Tensor, cache: TransformerKeyValueCache): IncrementalTransformerResult {
+        if (this.config.architecture !== 'modern') {
+            throw new TransformerError('Incremental KV-cache inference requires architecture="modern".');
+        }
+        if (tokens.rank !== 1 && tokens.rank !== 2) {
+            throw new TransformerError(
+                `Incremental Transformer expects [1] or [batch, 1] tokens. Received rank ${tokens.rank}.`,
+            );
+        }
+        const sequenceLength: number | undefined = tokens.shape[tokens.rank - 1];
+        const batchSize: number = tokens.rank === 2 ? (tokens.shape[0] ?? 0) : 1;
+        if (sequenceLength !== 1) {
+            throw new TransformerError(
+                `Incremental Transformer accepts exactly one token position per call. Received sequence length ${String(sequenceLength)}.`,
+            );
+        }
+        if (batchSize !== cache.batchSize) {
+            throw new TransformerError(
+                `KV cache batch size ${cache.batchSize} does not match token batch size ${batchSize}.`,
+            );
+        }
+        if (tokens.backend !== cache.backend || tokens.backend !== this.config.backend) {
+            throw new TransformerError('Token, model and KV cache backends must match.');
+        }
+        const positionOffset: number = cache.sequenceLength;
+        if (positionOffset >= cache.contextLength) {
+            throw new TransformerError(
+                `KV cache reached context length ${cache.contextLength}. Clear or rebuild the cache.`,
+            );
+        }
+
+        let hiddenState: Tensor = this.tokenEmbedding.forward(tokens);
+        for (let index: number = 0; index < this.blocks.length; index += 1) {
+            const block: TransformerBlock | undefined = this.blocks[index];
+            if (block === undefined) {
+                throw new TransformerError(`Transformer block at index ${index} does not exist.`);
+            }
+            const previousLayerCache: TransformerLayerKeyValueCache | undefined = cache.getLayer(index);
+            const result = block.forwardIncremental(hiddenState, previousLayerCache, positionOffset);
+            cache.setLayer(index, result.cache);
+            hiddenState = result.output;
+        }
+        cache.commitStep(positionOffset + 1);
+        const logits: Tensor = this.languageModelHead.forward(this.finalNormalization.forward(hiddenState));
+        return { logits, cache };
     }
 
     public override forward(tokens: Tensor): Tensor {

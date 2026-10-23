@@ -1,10 +1,16 @@
-# Edrion TypeScript — v1.5.0
+# Edrion TypeScript — v1.6.0
 
 Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, batched Transformer stack, Dataset/DataLoader pipeline, BPE tokenization, training, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v1.5.0 — FEATURE-015: Advanced Training Engine`
+`v1.6.0 — FEATURE-016: KV Cache + Streaming Generation`
+
+## KV Cache + Streaming Generation
+
+FEATURE-016 adds efficient incremental inference for modern Transformer models. Per-layer K/V projections are cached between generated tokens, RoPE receives the correct absolute position offset, and `TextGenerator.stream()` exposes token events as generation progresses.
+
+Generation results now include inference metrics such as generated tokens, duration, tokens per second, model forward calls and cache rebuilds. Legacy Transformer generation remains available unchanged.
 
 ## Advanced Training Engine
 
@@ -115,10 +121,10 @@ PR-FEATURE-014.md
 ## Packages
 
 ```text
-@edrion/core        1.4.0
-@edrion/nestjs      1.4.0
-edrion-typescript   1.4.0
-@edrion/nest-lab    1.4.0
+@edrion/core        1.6.0
+@edrion/nestjs      1.6.0
+edrion-typescript   1.6.0
+@edrion/nest-lab    1.6.0
 ```
 
 ## Branch
@@ -150,9 +156,9 @@ pnpm check
 | v1.2.0  | FEATURE-012 — Dataset + DataLoader             | ✅      |
 | v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | ✅      |
 | v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | ✅      |
-| v1.5.0  | FEATURE-015 — Advanced Training Engine         | Next    |
-| v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | Planned |
-| v1.7.0  | FEATURE-017 — WebGPU Backend                   | Planned |
+| v1.5.0  | FEATURE-015 — Advanced Training Engine         | ✅      |
+| v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | ✅      |
+| v1.7.0  | FEATURE-017 — WebGPU Backend                   | Next    |
 | v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
 | v1.9.0  | FEATURE-019 — Large Model Infrastructure       | Planned |
 | v2.0.0  | Edrion Language Model Foundation               | Planned |
@@ -175,4 +181,12 @@ optimizers:adamw
 training:lr-schedulers
 training:gradient-accumulation
 training:evaluation
+```
+
+## Production capabilities added in v1.6.0
+
+```text
+generation:kv-cache
+generation:streaming
+generation:inference-metrics
 ```
