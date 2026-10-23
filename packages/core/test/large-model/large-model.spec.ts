@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Linear, createShardedModelState, restoreShardedModelState, profileModel, planLargeModelMemory } from '@core/index';
+import {
+    Linear,
+    createShardedModelState,
+    restoreShardedModelState,
+    profileModel,
+    planLargeModelMemory,
+} from '@core/index';
 
 describe('large-model infrastructure', () => {
     it('profiles model memory', () => {
@@ -14,11 +20,19 @@ describe('large-model infrastructure', () => {
         const state = createShardedModelState(model, 16);
         const restored = new Linear(4, 3);
         restoreShardedModelState(restored, state);
-        expect(restored.namedParameters()[0]?.parameter.toFlatArray()).toEqual(model.namedParameters()[0]?.parameter.toFlatArray());
+        expect(restored.namedParameters()[0]?.parameter.toFlatArray()).toEqual(
+            model.namedParameters()[0]?.parameter.toFlatArray(),
+        );
     });
 
     it('plans memory conservatively', () => {
-        const plan = planLargeModelMemory({ parameterBytes: 100, gradientBytes: 100, optimizerStateBytes: 200, activationBytesPerSample: 100, availableBytes: 1000 });
+        const plan = planLargeModelMemory({
+            parameterBytes: 100,
+            gradientBytes: 100,
+            optimizerStateBytes: 200,
+            activationBytesPerSample: 100,
+            availableBytes: 1000,
+        });
         expect(plan.fitsStaticState).toBe(true);
         expect(plan.recommendedBatchSize).toBeGreaterThan(0);
     });

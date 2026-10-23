@@ -14,7 +14,9 @@ export class WebGPUKernelExecutor {
     /** Executes element-wise Float32 vector addition on WebGPU. */
     public async add(left: Float32Array, right: Float32Array): Promise<Float32Array> {
         if (left.length !== right.length) {
-            throw new RangeError(`WebGPU vector add requires equal lengths. Received ${left.length} and ${right.length}.`);
+            throw new RangeError(
+                `WebGPU vector add requires equal lengths. Received ${left.length} and ${right.length}.`,
+            );
         }
         if (left.length === 0) {
             return new Float32Array(0);
@@ -99,7 +101,7 @@ export class WebGPUKernelExecutor {
             size: dimensions.byteLength,
             usage: 64 | WEBGPU_BUFFER_USAGE.COPY_DST,
         });
-        device.queue.writeBuffer(dimensionsBuffer, 0, dimensions);
+        device.queue.writeBuffer(dimensionsBuffer, 0, toGpuBufferSource(dimensions));
         const readBuffer: WebGPUBufferLike = device.createBuffer({
             size: outputByteLength,
             usage: WEBGPU_BUFFER_USAGE.COPY_DST | WEBGPU_BUFFER_USAGE.MAP_READ,
@@ -148,12 +150,28 @@ export class WebGPUKernelExecutor {
     }
 }
 
+function toGpuBufferSource(source: ArrayBufferView<ArrayBufferLike>): Uint8Array<ArrayBuffer> {
+    const buffer: ArrayBuffer = new ArrayBuffer(source.byteLength);
+
+    const target: Uint8Array<ArrayBuffer> = new Uint8Array(buffer);
+
+    const sourceBytes: Uint8Array<ArrayBufferLike> = new Uint8Array(
+        source.buffer,
+        source.byteOffset,
+        source.byteLength,
+    );
+
+    target.set(sourceBytes);
+
+    return target;
+}
+
 function createStorageBuffer(device: WebGPUDeviceLike, values: Float32Array): WebGPUBufferLike {
     const buffer: WebGPUBufferLike = device.createBuffer({
         size: values.byteLength,
         usage: WEBGPU_BUFFER_USAGE.STORAGE | WEBGPU_BUFFER_USAGE.COPY_DST,
     });
-    device.queue.writeBuffer(buffer, 0, values);
+    device.queue.writeBuffer(buffer, 0, toGpuBufferSource(values));
     return buffer;
 }
 
@@ -177,7 +195,9 @@ function validateMatrixDimensions(
     for (let index: number = 0; index < dimensions.length; index += 1) {
         const value: number | undefined = dimensions[index];
         if (value === undefined || !Number.isInteger(value) || value <= 0) {
-            throw new RangeError(`WebGPU matrix dimensions must be positive integers. Received: [${dimensions.join(', ')}].`);
+            throw new RangeError(
+                `WebGPU matrix dimensions must be positive integers. Received: [${dimensions.join(', ')}].`,
+            );
         }
     }
     if (left.length !== leftRows * innerDimension) {

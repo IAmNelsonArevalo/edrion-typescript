@@ -25,10 +25,7 @@ describe('FEATURE-016 KV cache', (): void => {
             const prefix = new Tensor(ids.slice(0, index + 1), [index + 1]);
             const full = model.forward(prefix);
             for (let vocabularyIndex: number = 0; vocabularyIndex < 16; vocabularyIndex += 1) {
-                expect(incremental.get(0, vocabularyIndex)).toBeCloseTo(
-                    full.get(index, vocabularyIndex),
-                    4,
-                );
+                expect(incremental.get(0, vocabularyIndex)).toBeCloseTo(full.get(index, vocabularyIndex), 4);
             }
         }
 

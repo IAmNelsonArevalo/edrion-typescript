@@ -6,12 +6,7 @@ describe('FEATURE-011 batched transformer', (): void => {
     it('runs multi-head attention over [batch, sequence, embedding]', (): void => {
         const attention: MultiHeadAttention = new MultiHeadAttention(4, 2);
         const input: Tensor = new Tensor(
-            new Float32Array([
-                1, 0, 0, 1,
-                0, 1, 1, 0,
-                1, 1, 0, 0,
-                0, 0, 1, 1,
-            ]),
+            new Float32Array([1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1]),
             [2, 2, 4],
             { requiresGrad: true },
         );

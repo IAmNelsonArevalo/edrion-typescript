@@ -83,9 +83,8 @@ export class TextGenerator {
     ): Generator<GenerationTokenEvent, GenerationResult, void> {
         const normalized: NormalizedGenerationConfig = normalizeGenerationConfig(config);
         const promptIds: readonly number[] = this.tokenizer.encode(prompt, false);
-        const initialIds: number[] = promptIds.length === 0
-            ? [this.tokenizer.beginningOfSequenceTokenId]
-            : [...promptIds];
+        const initialIds: number[] =
+            promptIds.length === 0 ? [this.tokenizer.beginningOfSequenceTokenId] : [...promptIds];
         const allIds: number[] = [...initialIds];
         const generated: number[] = [];
         const sampler: Sampler = this.createSampler(normalized);
@@ -95,7 +94,15 @@ export class TextGenerator {
         let cacheResetCount: number = 0;
 
         if (normalized.maxNewTokens === 0) {
-            return this.createResult(allIds, generated, startedAt, forwardCalls, cacheEnabled, cacheResetCount, initialIds.length);
+            return this.createResult(
+                allIds,
+                generated,
+                startedAt,
+                forwardCalls,
+                cacheEnabled,
+                cacheResetCount,
+                initialIds.length,
+            );
         }
 
         if (cacheEnabled) {
@@ -142,7 +149,15 @@ export class TextGenerator {
             }
         }
 
-        return this.createResult(allIds, generated, startedAt, forwardCalls, cacheEnabled, cacheResetCount, initialIds.length);
+        return this.createResult(
+            allIds,
+            generated,
+            startedAt,
+            forwardCalls,
+            cacheEnabled,
+            cacheResetCount,
+            initialIds.length,
+        );
     }
 
     private prefillCache(contextIds: readonly number[]): CachedInferenceState {
@@ -185,7 +200,9 @@ export class TextGenerator {
 
     private readLastLogits(logits: Tensor): readonly number[] {
         if (logits.rank !== 2) {
-            throw new GenerationError(`Text generation expects rank-2 logits [sequence, vocabulary]. Received rank ${logits.rank}.`);
+            throw new GenerationError(
+                `Text generation expects rank-2 logits [sequence, vocabulary]. Received rank ${logits.rank}.`,
+            );
         }
         const shape: readonly number[] = logits.shape;
         const sequenceLength: number | undefined = shape[0];
@@ -219,9 +236,8 @@ export class TextGenerator {
         promptTokenCount: number,
     ): GenerationResult {
         const durationMs: number = Math.max(0, Date.now() - startedAt);
-        const tokensPerSecond: number = generated.length === 0
-            ? 0
-            : (generated.length * 1_000) / Math.max(1, durationMs);
+        const tokensPerSecond: number =
+            generated.length === 0 ? 0 : (generated.length * 1_000) / Math.max(1, durationMs);
         return {
             text: this.tokenizer.decode(allIds, true),
             tokenIds: [...allIds],

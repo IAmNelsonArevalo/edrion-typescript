@@ -6,7 +6,11 @@ import type { Optimizer } from '@core/optim/optimizer';
 import type { LossScaler, PrecisionPolicy } from '@core/precision';
 import { clipGradientsByGlobalNorm, computeGlobalGradientNorm } from '@core/stability';
 import { Tensor } from '@core/tensor/tensor';
-import { normalizeTrainingConfig, type NormalizedTrainingConfig, type TrainingConfig } from '@core/training/training-config';
+import {
+    normalizeTrainingConfig,
+    type NormalizedTrainingConfig,
+    type TrainingConfig,
+} from '@core/training/training-config';
 import { TrainingDataError } from '@core/training/training.errors';
 import type { BatchMetrics, EpochMetrics, EvaluationMetrics, TrainingResult } from '@core/training/training-metrics';
 import type { TrainingState } from '@core/training/training-state';
@@ -64,10 +68,14 @@ export class Trainer {
 
     public restoreState(state: TrainingState): void {
         if (!Number.isInteger(state.epoch) || state.epoch < 0) {
-            throw new TrainingDataError(`Training state epoch must be a non-negative integer. Received ${state.epoch}.`);
+            throw new TrainingDataError(
+                `Training state epoch must be a non-negative integer. Received ${state.epoch}.`,
+            );
         }
         if (!Number.isInteger(state.globalStep) || state.globalStep < 0) {
-            throw new TrainingDataError(`Training state globalStep must be a non-negative integer. Received ${state.globalStep}.`);
+            throw new TrainingDataError(
+                `Training state globalStep must be a non-negative integer. Received ${state.globalStep}.`,
+            );
         }
         this.stateInternal = { ...state };
     }
@@ -99,7 +107,9 @@ export class Trainer {
             epochs: epochMetrics,
             totalDurationMs: Math.max(0, Date.now() - startTime),
             finalLoss: finalMetrics.averageLoss,
-            ...(finalMetrics.validation === undefined ? {} : { finalValidationLoss: finalMetrics.validation.averageLoss }),
+            ...(finalMetrics.validation === undefined
+                ? {}
+                : { finalValidationLoss: finalMetrics.validation.averageLoss }),
         };
     }
 
@@ -122,7 +132,9 @@ export class Trainer {
                 const batchLoss: Tensor = this.loss.forward(prediction, target);
                 const scalarLoss: number = batchLoss.get();
                 if (!Number.isFinite(scalarLoss)) {
-                    throw new TrainingDataError(`Evaluation loss is not finite at batch ${batch.batchIndex}. Received ${scalarLoss}.`);
+                    throw new TrainingDataError(
+                        `Evaluation loss is not finite at batch ${batch.batchIndex}. Received ${scalarLoss}.`,
+                    );
                 }
                 weightedLoss += scalarLoss * batch.samples.length;
                 samples += batch.samples.length;
@@ -137,10 +149,19 @@ export class Trainer {
         if (samples === 0) {
             throw new TrainingDataError('Evaluation did not process any samples.');
         }
-        return { samples, batches, averageLoss: weightedLoss / samples, durationMs: Math.max(0, Date.now() - startedAt) };
+        return {
+            samples,
+            batches,
+            averageLoss: weightedLoss / samples,
+            durationMs: Math.max(0, Date.now() - startedAt),
+        };
     }
 
-    private trainEpoch(loader: DataLoader<TrainingSample>, epochNumber: number, callbacks: TrainerCallbacks): EpochMetrics {
+    private trainEpoch(
+        loader: DataLoader<TrainingSample>,
+        epochNumber: number,
+        callbacks: TrainerCallbacks,
+    ): EpochMetrics {
         const startedAt: number = Date.now();
         let weightedLoss: number = 0;
         let processedSamples: number = 0;
@@ -188,7 +209,12 @@ export class Trainer {
         };
     }
 
-    private trainBatch(batch: DataBatch<TrainingSample>, epochNumber: number, shouldStep: boolean, accumulationCount: number): BatchMetrics {
+    private trainBatch(
+        batch: DataBatch<TrainingSample>,
+        epochNumber: number,
+        shouldStep: boolean,
+        accumulationCount: number,
+    ): BatchMetrics {
         if (batch.samples.length === 0) {
             throw new TrainingDataError(`Training batch ${batch.batchIndex} cannot be empty.`);
         }
@@ -200,7 +226,9 @@ export class Trainer {
         const batchLoss: Tensor = this.loss.forward(prediction, target);
         const scalarLoss: number = batchLoss.get();
         if (!Number.isFinite(scalarLoss)) {
-            throw new TrainingDataError(`Training loss is not finite at epoch ${epochNumber}, batch ${batch.batchIndex}. Received ${scalarLoss}.`);
+            throw new TrainingDataError(
+                `Training loss is not finite at epoch ${epochNumber}, batch ${batch.batchIndex}. Received ${scalarLoss}.`,
+            );
         }
         const backwardLoss: Tensor = this.lossScaler?.scaleLoss(batchLoss) ?? batchLoss;
         backwardLoss.backward();
@@ -229,7 +257,10 @@ export class Trainer {
             }
             if (!skippedOptimizerStep) {
                 if (this.config.maxGradientNorm !== undefined) {
-                    gradientNorm = clipGradientsByGlobalNorm(this.optimizer.parameters, this.config.maxGradientNorm).totalNorm;
+                    gradientNorm = clipGradientsByGlobalNorm(
+                        this.optimizer.parameters,
+                        this.config.maxGradientNorm,
+                    ).totalNorm;
                 } else {
                     gradientNorm = computeGlobalGradientNorm(this.optimizer.parameters);
                 }
@@ -276,7 +307,9 @@ export class Trainer {
             throw new TrainingDataError(`${label} dataset cannot be empty.`);
         }
         if (loader.batchCount === 0) {
-            throw new TrainingDataError(`${label} DataLoader does not emit any batches. Disable dropLast or reduce batchSize.`);
+            throw new TrainingDataError(
+                `${label} DataLoader does not emit any batches. Disable dropLast or reduce batchSize.`,
+            );
         }
     }
 
@@ -284,7 +317,9 @@ export class Trainer {
         if (source instanceof DataLoader) {
             return source;
         }
-        const dataset: Dataset<TrainingSample> = Array.isArray(source) ? new ArrayDataset(source) : (source as Dataset<TrainingSample>);
+        const dataset: Dataset<TrainingSample> = Array.isArray(source)
+            ? new ArrayDataset(source)
+            : (source as Dataset<TrainingSample>);
         return new DataLoader(dataset, {
             batchSize: this.config.batchSize,
             shuffle: this.config.shuffle,

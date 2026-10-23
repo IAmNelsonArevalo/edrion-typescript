@@ -1,4 +1,4 @@
-/** Stable capability identifiers exposed by Edrion v1.9.0. */
+/** Stable capability identifiers exposed by Edrion v2.0.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
@@ -33,6 +33,10 @@ export type EdrionCapability =
     | 'transformer:rmsnorm'
     | 'transformer:swiglu'
     | 'transformer:modern-architecture'
+    | 'language-model:causal-lm'
+    | 'language-model:pretraining'
+    | 'language-model:perplexity'
+    | 'language-model:generation'
     | 'large-model:sharded-checkpoints'
     | 'large-model:memory-planning'
     | 'large-model:profiling'
@@ -74,6 +78,10 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'generation:kv-cache',
     'generation:streaming',
     'generation:inference-metrics',
+    'language-model:causal-lm',
+    'language-model:pretraining',
+    'language-model:perplexity',
+    'language-model:generation',
     'large-model:sharded-checkpoints',
     'large-model:memory-planning',
     'large-model:profiling',
@@ -87,7 +95,7 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'training:loss-scaling',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.9.0. */
+/** Returns the stable capabilities available in Edrion v2.0.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],

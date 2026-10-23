@@ -16,6 +16,7 @@ export {
 
 export * from './losses';
 export * from './large-model';
+export * from './language-model';
 export * from './metrics';
 export * from './nn';
 export * from './optim';

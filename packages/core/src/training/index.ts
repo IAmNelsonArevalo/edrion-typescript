@@ -2,4 +2,10 @@ export { normalizeTrainingConfig, type NormalizedTrainingConfig, type TrainingCo
 export { TrainingConfigError, TrainingDataError, TrainingError } from './training.errors';
 export type { BatchMetrics, EpochMetrics, EvaluationMetrics, TrainingResult } from './training-metrics';
 export { createInitialTrainingState, type TrainingState } from './training-state';
-export { Trainer, type TrainerCallbacks, type TrainerOptions, type TrainingDataSource, type TrainingSample } from './trainer';
+export {
+    Trainer,
+    type TrainerCallbacks,
+    type TrainerOptions,
+    type TrainingDataSource,
+    type TrainingSample,
+} from './trainer';
