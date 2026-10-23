@@ -6,6 +6,8 @@ Edrion is a TypeScript-first deep-learning framework with its own Tensor engine,
 
 `v1.7.0 — FEATURE-017: WebGPU Backend`
 
+
+
 ## KV Cache + Streaming Generation
 
 FEATURE-016 adds efficient incremental inference for modern Transformer models. Per-layer K/V projections are cached between generated tokens, RoPE receives the correct absolute position offset, and `TextGenerator.stream()` exposes token events as generation progresses.
@@ -79,13 +81,13 @@ out  = Wdown(gate * up)
 For v1.x backward compatibility, `TransformerModel` keeps the legacy default. Enable the new architecture explicitly with:
 
 ```ts
-architecture: 'modern';
+architecture: 'modern'
 ```
 
 The previous path remains available as:
 
 ```ts
-architecture: 'legacy';
+architecture: 'legacy'
 ```
 
 ## Production capabilities added in v1.4.0
@@ -149,20 +151,19 @@ pnpm check
 
 ## Roadmap
 
-| Version | Feature                                        | Status  |
-| ------- | ---------------------------------------------- | ------- |
-| v1.0.0  | FEATURE-010 — Production Foundation            | ✅      |
-| v1.1.0  | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅      |
-| v1.2.0  | FEATURE-012 — Dataset + DataLoader             | ✅      |
-| v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | ✅      |
-| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | ✅      |
-| v1.5.0  | FEATURE-015 — Advanced Training Engine         | ✅      |
-| v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | ✅      |
-| v1.7.0  | FEATURE-017 — WebGPU Backend                   | Next    |
-| v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
-| v1.9.0  | FEATURE-019 — Large Model Infrastructure       | Planned |
-| v2.0.0  | Edrion Language Model Foundation               | Planned |
-
+| Version | Feature | Status |
+| --- | --- | --- |
+| v1.0.0 | FEATURE-010 — Production Foundation | ✅ |
+| v1.1.0 | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅ |
+| v1.2.0 | FEATURE-012 — Dataset + DataLoader | ✅ |
+| v1.3.0 | FEATURE-013 — Advanced Tokenization / BPE | ✅ |
+| v1.4.0 | FEATURE-014 — Modern Transformer Architecture | ✅ |
+| v1.5.0 | FEATURE-015 — Advanced Training Engine | ✅ |
+| v1.6.0 | FEATURE-016 — KV Cache + Streaming Generation | ✅ |
+| v1.7.0 | FEATURE-017 — WebGPU Backend | Next |
+| v1.8.0 | FEATURE-018 — Mixed Precision | Planned |
+| v1.9.0 | FEATURE-019 — Large Model Infrastructure | Planned |
+| v2.0.0 | Edrion Language Model Foundation | Planned |
 # Edrion Nest Lab
 
 Executable NestJS consumer used by Edrion's integration QA.
@@ -174,6 +175,7 @@ pnpm --filter @edrion/nest-lab test
 pnpm --filter @edrion/nest-lab build
 ```
 
+
 ## Production capabilities added in v1.5.0
 
 ```text
@@ -183,6 +185,7 @@ training:gradient-accumulation
 training:evaluation
 ```
 
+
 ## Production capabilities added in v1.6.0
 
 ```text
@@ -190,6 +193,7 @@ generation:kv-cache
 generation:streaming
 generation:inference-metrics
 ```
+
 
 ## FEATURE-017 — WebGPU Backend
 
@@ -200,3 +204,7 @@ The existing synchronous Tensor API intentionally remains CPU-resident in this r
 ## v1.8.0 — Mixed Precision
 
 Edrion v1.8.0 adds the mixed-precision foundation required for larger language-model training: logical `float16`/`bfloat16`, dtype-aware quantization, differentiable casting, precision policies and dynamic loss scaling. `float32` remains the default and native GPU-resident reduced-precision tensor storage is intentionally deferred to future backend/tensor integration work.
+
+## v1.9.0 — Large Model Infrastructure
+
+FEATURE-019 adds sharded model state, model-memory profiling, conservative memory planning and performance profiling as the final v1.x infrastructure step before Edrion v2.0.0.

@@ -21,19 +21,13 @@ export class RMSNormalization extends Module {
         }
         const epsilon: number = options.epsilon ?? 1e-6;
         if (!Number.isFinite(epsilon) || epsilon <= 0) {
-            throw new NeuralNetworkError(
-                `RMSNormalization epsilon must be finite and greater than zero. Received ${epsilon}.`,
-            );
+            throw new NeuralNetworkError(`RMSNormalization epsilon must be finite and greater than zero. Received ${epsilon}.`);
         }
         this.featureCount = featureCount;
         this.epsilon = epsilon;
         this.weight = this.registerParameter(
             'weight',
-            new Parameter(
-                new Float32Array(featureCount).fill(1),
-                [featureCount],
-                options.backend === undefined ? {} : { backend: options.backend },
-            ),
+            new Parameter(new Float32Array(featureCount).fill(1), [featureCount], options.backend === undefined ? {} : { backend: options.backend }),
         );
     }
 
@@ -43,9 +37,7 @@ export class RMSNormalization extends Module {
         }
         const features: number | undefined = input.shape[input.rank - 1];
         if (features !== this.featureCount) {
-            throw new LayerShapeError(
-                `RMSNormalization expected ${this.featureCount} features but received ${String(features)}.`,
-            );
+            throw new LayerShapeError(`RMSNormalization expected ${this.featureCount} features but received ${String(features)}.`);
         }
         const rms: Tensor = input.pow(2).mean(-1, true).add(this.epsilon).sqrt();
         return input.div(rms).mul(this.weight);

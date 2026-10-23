@@ -14,9 +14,7 @@ export class WebGPUKernelExecutor {
     /** Executes element-wise Float32 vector addition on WebGPU. */
     public async add(left: Float32Array, right: Float32Array): Promise<Float32Array> {
         if (left.length !== right.length) {
-            throw new RangeError(
-                `WebGPU vector add requires equal lengths. Received ${left.length} and ${right.length}.`,
-            );
+            throw new RangeError(`WebGPU vector add requires equal lengths. Received ${left.length} and ${right.length}.`);
         }
         if (left.length === 0) {
             return new Float32Array(0);
@@ -101,7 +99,7 @@ export class WebGPUKernelExecutor {
             size: dimensions.byteLength,
             usage: 64 | WEBGPU_BUFFER_USAGE.COPY_DST,
         });
-        device.queue.writeBuffer(dimensionsBuffer, 0, dimensions as any);
+        device.queue.writeBuffer(dimensionsBuffer, 0, dimensions);
         const readBuffer: WebGPUBufferLike = device.createBuffer({
             size: outputByteLength,
             usage: WEBGPU_BUFFER_USAGE.COPY_DST | WEBGPU_BUFFER_USAGE.MAP_READ,
@@ -155,7 +153,7 @@ function createStorageBuffer(device: WebGPUDeviceLike, values: Float32Array): We
         size: values.byteLength,
         usage: WEBGPU_BUFFER_USAGE.STORAGE | WEBGPU_BUFFER_USAGE.COPY_DST,
     });
-    device.queue.writeBuffer(buffer, 0, values as any);
+    device.queue.writeBuffer(buffer, 0, values);
     return buffer;
 }
 
@@ -179,9 +177,7 @@ function validateMatrixDimensions(
     for (let index: number = 0; index < dimensions.length; index += 1) {
         const value: number | undefined = dimensions[index];
         if (value === undefined || !Number.isInteger(value) || value <= 0) {
-            throw new RangeError(
-                `WebGPU matrix dimensions must be positive integers. Received: [${dimensions.join(', ')}].`,
-            );
+            throw new RangeError(`WebGPU matrix dimensions must be positive integers. Received: [${dimensions.join(', ')}].`);
         }
     }
     if (left.length !== leftRows * innerDimension) {

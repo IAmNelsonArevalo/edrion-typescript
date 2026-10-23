@@ -18,31 +18,14 @@ export class SwiGLUFeedForward extends Module {
 
     public constructor(embeddingDimension: number, hiddenDimension: number, options: SwiGLUFeedForwardOptions = {}) {
         super();
-        if (
-            !Number.isInteger(embeddingDimension) ||
-            embeddingDimension <= 0 ||
-            !Number.isInteger(hiddenDimension) ||
-            hiddenDimension <= 0
-        ) {
+        if (!Number.isInteger(embeddingDimension) || embeddingDimension <= 0 || !Number.isInteger(hiddenDimension) || hiddenDimension <= 0) {
             throw new TransformerConfigurationError('SwiGLU dimensions must be positive integers.');
         }
-        const linearOptions = {
-            bias: options.bias ?? false,
-            ...(options.backend === undefined ? {} : { backend: options.backend }),
-        };
-        this.gateProjection = this.registerModule(
-            'gateProjection',
-            new Linear(embeddingDimension, hiddenDimension, linearOptions),
-        );
-        this.upProjection = this.registerModule(
-            'upProjection',
-            new Linear(embeddingDimension, hiddenDimension, linearOptions),
-        );
+        const linearOptions = { bias: options.bias ?? false, ...(options.backend === undefined ? {} : { backend: options.backend }) };
+        this.gateProjection = this.registerModule('gateProjection', new Linear(embeddingDimension, hiddenDimension, linearOptions));
+        this.upProjection = this.registerModule('upProjection', new Linear(embeddingDimension, hiddenDimension, linearOptions));
         this.activation = this.registerModule('activation', new SiLU());
-        this.downProjection = this.registerModule(
-            'downProjection',
-            new Linear(hiddenDimension, embeddingDimension, linearOptions),
-        );
+        this.downProjection = this.registerModule('downProjection', new Linear(hiddenDimension, embeddingDimension, linearOptions));
     }
 
     public override forward(input: Tensor): Tensor {

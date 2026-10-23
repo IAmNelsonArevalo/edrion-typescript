@@ -15,6 +15,7 @@ import { Tensor } from '@core/tensor/tensor';
 
 type FinalNormalization = LayerNormalization | RMSNormalization;
 
+
 export interface IncrementalTransformerResult {
     readonly logits: Tensor;
     readonly cache: TransformerKeyValueCache;
@@ -41,9 +42,7 @@ export class TransformerModel extends Module {
             this.config.architecture === 'legacy'
                 ? this.registerModule(
                       'positionEmbedding',
-                      new Embedding(this.config.contextLength, this.config.embeddingDimension, {
-                          backend: this.config.backend,
-                      }),
+                      new Embedding(this.config.contextLength, this.config.embeddingDimension, { backend: this.config.backend }),
                   )
                 : undefined;
 
@@ -119,18 +118,14 @@ export class TransformerModel extends Module {
             );
         }
         if (batchSize !== cache.batchSize) {
-            throw new TransformerError(
-                `KV cache batch size ${cache.batchSize} does not match token batch size ${batchSize}.`,
-            );
+            throw new TransformerError(`KV cache batch size ${cache.batchSize} does not match token batch size ${batchSize}.`);
         }
         if (tokens.backend !== cache.backend || tokens.backend !== this.config.backend) {
             throw new TransformerError('Token, model and KV cache backends must match.');
         }
         const positionOffset: number = cache.sequenceLength;
         if (positionOffset >= cache.contextLength) {
-            throw new TransformerError(
-                `KV cache reached context length ${cache.contextLength}. Clear or rebuild the cache.`,
-            );
+            throw new TransformerError(`KV cache reached context length ${cache.contextLength}. Clear or rebuild the cache.`);
         }
 
         let hiddenState: Tensor = this.tokenEmbedding.forward(tokens);

@@ -104,9 +104,7 @@ export class DataLoader<TSample> implements Iterable<DataBatch<TSample>> {
 /** Validates and normalizes a DataLoader configuration. */
 export function normalizeDataLoaderConfig(config: DataLoaderConfig): NormalizedDataLoaderConfig {
     if (!Number.isInteger(config.batchSize) || config.batchSize <= 0) {
-        throw new DataLoaderConfigError(
-            `DataLoader batchSize must be a positive integer. Received ${config.batchSize}.`,
-        );
+        throw new DataLoaderConfigError(`DataLoader batchSize must be a positive integer. Received ${config.batchSize}.`);
     }
 
     const seed: number = config.seed ?? 1337;

@@ -9,11 +9,7 @@ export class TensorStorage {
     private readonly values: Float32Array;
 
     /** Creates independent tensor storage. */
-    public constructor(
-        data: TensorData,
-        expectedSize: number,
-        private readonly dtype: DType = 'float32',
-    ) {
+    public constructor(data: TensorData, expectedSize: number, private readonly dtype: DType = 'float32') {
         if (data.length !== expectedSize) {
             throw new TensorDataError(
                 `Tensor data length ${data.length} does not match expected tensor size ${expectedSize}.`,

@@ -21,24 +21,14 @@ export interface WebGPUComputePassLike {
 
 export interface WebGPUCommandEncoderLike {
     beginComputePass(): WebGPUComputePassLike;
-    copyBufferToBuffer(
-        source: WebGPUBufferLike,
-        sourceOffset: number,
-        destination: WebGPUBufferLike,
-        destinationOffset: number,
-        size: number,
-    ): void;
+    copyBufferToBuffer(source: WebGPUBufferLike, sourceOffset: number, destination: WebGPUBufferLike, destinationOffset: number, size: number): void;
     finish(): unknown;
 }
 
 export interface WebGPUDeviceLike {
     readonly queue: WebGPUQueueLike;
     readonly lost?: Promise<unknown>;
-    createBuffer(descriptor: {
-        readonly size: number;
-        readonly usage: number;
-        readonly mappedAtCreation?: boolean;
-    }): WebGPUBufferLike;
+    createBuffer(descriptor: { readonly size: number; readonly usage: number; readonly mappedAtCreation?: boolean }): WebGPUBufferLike;
     createShaderModule(descriptor: { readonly code: string }): unknown;
     createBindGroupLayout(descriptor: unknown): unknown;
     createPipelineLayout(descriptor: unknown): unknown;
@@ -54,9 +44,7 @@ export interface WebGPUAdapterLike {
 
 export interface WebGPUNavigatorLike {
     readonly gpu?: {
-        requestAdapter(options?: {
-            readonly powerPreference?: 'low-power' | 'high-performance';
-        }): Promise<WebGPUAdapterLike | null>;
+        requestAdapter(options?: { readonly powerPreference?: 'low-power' | 'high-performance' }): Promise<WebGPUAdapterLike | null>;
     };
 }
 

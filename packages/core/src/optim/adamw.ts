@@ -1,11 +1,7 @@
 import type { Parameter } from '@core/nn/parameter';
 import { Optimizer } from '@core/optim/optimizer';
 import { OptimizerError } from '@core/optim/optimizer.errors';
-import {
-    assertPositiveFinite,
-    assertUnitIntervalExclusiveOne,
-    getParameterGradient,
-} from '@core/optim/optimizer.utils';
+import { assertPositiveFinite, assertUnitIntervalExclusiveOne, getParameterGradient } from '@core/optim/optimizer.utils';
 
 /** AdamW optimizer configuration. */
 export interface AdamWOptions {
@@ -44,9 +40,7 @@ export class AdamW extends Optimizer {
         assertPositiveFinite(epsilon, 'AdamW epsilon');
 
         if (!Number.isFinite(weightDecay) || weightDecay < 0) {
-            throw new OptimizerError(
-                `AdamW weightDecay must be a finite non-negative number. Received ${weightDecay}.`,
-            );
+            throw new OptimizerError(`AdamW weightDecay must be a finite non-negative number. Received ${weightDecay}.`);
         }
 
         this.beta1 = beta1;
@@ -85,20 +79,12 @@ export class AdamW extends Optimizer {
                 const previousFirstMoment: number | undefined = state.firstMoment[valueIndex];
                 const previousSecondMoment: number | undefined = state.secondMoment[valueIndex];
 
-                if (
-                    currentValue === undefined ||
-                    gradientValue === undefined ||
-                    previousFirstMoment === undefined ||
-                    previousSecondMoment === undefined
-                ) {
-                    throw new OptimizerError(
-                        `Unable to resolve AdamW data at parameter index ${parameterIndex}, value index ${valueIndex}.`,
-                    );
+                if (currentValue === undefined || gradientValue === undefined || previousFirstMoment === undefined || previousSecondMoment === undefined) {
+                    throw new OptimizerError(`Unable to resolve AdamW data at parameter index ${parameterIndex}, value index ${valueIndex}.`);
                 }
 
                 const firstMoment: number = this.beta1 * previousFirstMoment + (1 - this.beta1) * gradientValue;
-                const secondMoment: number =
-                    this.beta2 * previousSecondMoment + (1 - this.beta2) * gradientValue * gradientValue;
+                const secondMoment: number = this.beta2 * previousSecondMoment + (1 - this.beta2) * gradientValue * gradientValue;
                 state.firstMoment[valueIndex] = firstMoment;
                 state.secondMoment[valueIndex] = secondMoment;
 
