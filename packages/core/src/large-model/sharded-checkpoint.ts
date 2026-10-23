@@ -1,5 +1,10 @@
 import type { Module } from '@core/nn/module';
-import { captureModelState, restoreModelState, type ModelState, type SerializedParameter } from '@core/serialization/model-state';
+import {
+    captureModelState,
+    restoreModelState,
+    type ModelState,
+    type SerializedParameter,
+} from '@core/serialization/model-state';
 import { ShardedCheckpointError } from '@core/large-model/large-model.errors';
 
 export const SHARDED_MODEL_FORMAT_VERSION: number = 1;

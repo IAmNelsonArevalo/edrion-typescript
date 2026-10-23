@@ -154,7 +154,6 @@ export class Tensor {
         });
     }
 
-
     /** Casts this tensor to another logical precision while preserving Autograd. */
     public cast(dtype: DType): Tensor {
         assertSupportedDType(dtype);
@@ -465,11 +464,13 @@ export class Tensor {
      *
      * Supports [sequence, features] and [batch, sequence, features] tensors.
      */
-    public applyRotaryPositionEmbedding(rotaryDimension: number, base: number = 10_000, positionOffset: number = 0): Tensor {
+    public applyRotaryPositionEmbedding(
+        rotaryDimension: number,
+        base: number = 10_000,
+        positionOffset: number = 0,
+    ): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
-            throw new TensorShapeError(
-                `RoPE expects rank 2 or rank 3 input. Received rank ${this.rank}.`,
-            );
+            throw new TensorShapeError(`RoPE expects rank 2 or rank 3 input. Received rank ${this.rank}.`);
         }
 
         const shape: readonly number[] = this.tensorShape;
@@ -480,7 +481,12 @@ export class Tensor {
             throw new TensorShapeError('Unable to resolve RoPE tensor dimensions.');
         }
 
-        if (!Number.isInteger(rotaryDimension) || rotaryDimension <= 0 || rotaryDimension > featureCount || rotaryDimension % 2 !== 0) {
+        if (
+            !Number.isInteger(rotaryDimension) ||
+            rotaryDimension <= 0 ||
+            rotaryDimension > featureCount ||
+            rotaryDimension % 2 !== 0
+        ) {
             throw new TensorShapeError(
                 `rotaryDimension must be a positive even integer <= feature dimension ${featureCount}. Received ${rotaryDimension}.`,
             );
@@ -490,7 +496,9 @@ export class Tensor {
             throw new TensorDataError(`RoPE base must be finite and greater than 1. Received ${base}.`);
         }
         if (!Number.isInteger(positionOffset) || positionOffset < 0) {
-            throw new TensorDataError(`RoPE positionOffset must be a non-negative integer. Received ${positionOffset}.`);
+            throw new TensorDataError(
+                `RoPE positionOffset must be a non-negative integer. Received ${positionOffset}.`,
+            );
         }
 
         const inputData: Float32Array = this.toFloat32Array();
@@ -606,9 +614,7 @@ export class Tensor {
      */
     public transpose(): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
-            throw new TensorShapeError(
-                `transpose() requires a rank-2 or rank-3 tensor. Received rank ${this.rank}.`,
-            );
+            throw new TensorShapeError(`transpose() requires a rank-2 or rank-3 tensor. Received rank ${this.rank}.`);
         }
 
         if (this.rank === 2) {
@@ -759,14 +765,7 @@ export class Tensor {
                 if (right.tensorRequiresGrad) {
                     const leftTranspose: Float32Array = transposeMatrix(leftMatrix, leftRows, leftColumns);
                     rightGradient.set(
-                        matmulOperation(
-                            leftTranspose,
-                            leftColumns,
-                            leftRows,
-                            gradientMatrix,
-                            leftRows,
-                            rightColumns,
-                        ),
+                        matmulOperation(leftTranspose, leftColumns, leftRows, gradientMatrix, leftRows, rightColumns),
                         rightOffset,
                     );
                 }
@@ -810,39 +809,19 @@ export class Tensor {
             if (this.tensorRequiresGrad) {
                 const rightTranspose: Float32Array = transposeMatrix(rightData, rightRows, rightColumns);
                 this.accumulateGradient(
-                    matmulOperation(
-                        gradient,
-                        leftRows,
-                        rightColumns,
-                        rightTranspose,
-                        rightColumns,
-                        rightRows,
-                    ),
+                    matmulOperation(gradient, leftRows, rightColumns, rightTranspose, rightColumns, rightRows),
                 );
             }
 
             if (right.tensorRequiresGrad) {
                 const leftTranspose: Float32Array = transposeMatrix(leftData, leftRows, leftColumns);
                 right.accumulateGradient(
-                    matmulOperation(
-                        leftTranspose,
-                        leftColumns,
-                        leftRows,
-                        gradient,
-                        leftRows,
-                        rightColumns,
-                    ),
+                    matmulOperation(leftTranspose, leftColumns, leftRows, gradient, leftRows, rightColumns),
                 );
             }
         };
 
-        return this.createOperationTensor(
-            resultData,
-            [leftRows, rightColumns],
-            requiresGrad,
-            [this, right],
-            backward,
-        );
+        return this.createOperationTensor(resultData, [leftRows, rightColumns], requiresGrad, [this, right], backward);
     }
 
     /**
@@ -851,9 +830,7 @@ export class Tensor {
      */
     public sliceColumns(startColumn: number, endColumn: number): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
-            throw new TensorShapeError(
-                `sliceColumns() requires rank-2 or rank-3 input. Received rank ${this.rank}.`,
-            );
+            throw new TensorShapeError(`sliceColumns() requires rank-2 or rank-3 input. Received rank ${this.rank}.`);
         }
 
         const columns: number = readShapeDimension(this.tensorShape, this.rank - 1);
@@ -1014,13 +991,7 @@ export class Tensor {
             }
         };
 
-        return first.createOperationTensor(
-            result,
-            [...leadingShape, totalColumns],
-            requiresGrad,
-            tensors,
-            backward,
-        );
+        return first.createOperationTensor(result, [...leadingShape, totalColumns], requiresGrad, tensors, backward);
     }
 
     /**

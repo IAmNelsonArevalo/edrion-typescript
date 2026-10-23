@@ -1,6 +1,6 @@
 {
     "name": "edrion-typescript",
-    "version": "1.9.0",
+    "version": "2.0.0",
     "description": "TypeScript AI and Deep Learning framework for the Edrion ecosystem",
     "license": "MIT",
     "type": "module",

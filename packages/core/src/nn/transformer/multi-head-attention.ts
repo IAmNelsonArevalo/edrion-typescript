@@ -6,7 +6,6 @@ import { ScaledDotProductAttention } from '@core/nn/transformer/scaled-dot-produ
 import { AttentionShapeError, TransformerConfigurationError } from '@core/nn/transformer/transformer.errors';
 import { Tensor } from '@core/tensor/tensor';
 
-
 export interface IncrementalAttentionResult {
     readonly output: Tensor;
     readonly cache: TransformerLayerKeyValueCache;
@@ -67,10 +66,22 @@ export class MultiHeadAttention extends Module {
             ...(options.backend === undefined ? {} : { backend: options.backend }),
         };
 
-        this.queryProjection = this.registerModule('queryProjection', new Linear(embeddingDimension, embeddingDimension, linearOptions));
-        this.keyProjection = this.registerModule('keyProjection', new Linear(embeddingDimension, embeddingDimension, linearOptions));
-        this.valueProjection = this.registerModule('valueProjection', new Linear(embeddingDimension, embeddingDimension, linearOptions));
-        this.outputProjection = this.registerModule('outputProjection', new Linear(embeddingDimension, embeddingDimension, linearOptions));
+        this.queryProjection = this.registerModule(
+            'queryProjection',
+            new Linear(embeddingDimension, embeddingDimension, linearOptions),
+        );
+        this.keyProjection = this.registerModule(
+            'keyProjection',
+            new Linear(embeddingDimension, embeddingDimension, linearOptions),
+        );
+        this.valueProjection = this.registerModule(
+            'valueProjection',
+            new Linear(embeddingDimension, embeddingDimension, linearOptions),
+        );
+        this.outputProjection = this.registerModule(
+            'outputProjection',
+            new Linear(embeddingDimension, embeddingDimension, linearOptions),
+        );
     }
 
     /** Inference-only one-step attention using a per-layer KV cache. */
@@ -110,7 +121,11 @@ export class MultiHeadAttention extends Module {
             let keyHead: Tensor = projectedKey.sliceColumns(startColumn, endColumn);
 
             if (this.rotaryEmbedding) {
-                queryHead = queryHead.applyRotaryPositionEmbedding(this.rotaryDimension, this.rotaryBase, positionOffset);
+                queryHead = queryHead.applyRotaryPositionEmbedding(
+                    this.rotaryDimension,
+                    this.rotaryBase,
+                    positionOffset,
+                );
                 keyHead = keyHead.applyRotaryPositionEmbedding(this.rotaryDimension, this.rotaryBase, positionOffset);
             }
             queryHeads[head] = queryHead;

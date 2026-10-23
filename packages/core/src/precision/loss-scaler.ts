@@ -87,10 +87,12 @@ function validateGreaterThanOne(value: number, label: string): number {
     return value;
 }
 function validateFraction(value: number, label: string): number {
-    if (!Number.isFinite(value) || value <= 0 || value >= 1) throw new Error(`${label} must be between 0 and 1. Received ${value}.`);
+    if (!Number.isFinite(value) || value <= 0 || value >= 1)
+        throw new Error(`${label} must be between 0 and 1. Received ${value}.`);
     return value;
 }
 function validatePositiveInteger(value: number, label: string): number {
-    if (!Number.isInteger(value) || value <= 0) throw new Error(`${label} must be a positive integer. Received ${value}.`);
+    if (!Number.isInteger(value) || value <= 0)
+        throw new Error(`${label} must be a positive integer. Received ${value}.`);
     return value;
 }
