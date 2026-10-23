@@ -1,4 +1,4 @@
-/** Stable capability identifiers exposed by Edrion v1.4.0. */
+/** Stable capability identifiers exposed by Edrion v1.5.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
@@ -11,6 +11,10 @@ export type EdrionCapability =
     | 'neural-network'
     | 'numerical-safety'
     | 'optimizers'
+    | 'optimizers:adamw'
+    | 'training:lr-schedulers'
+    | 'training:gradient-accumulation'
+    | 'training:evaluation'
     | 'serialization'
     | 'tensor'
     | 'tokenizer'
@@ -40,6 +44,10 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'neural-network',
     'losses',
     'optimizers',
+    'optimizers:adamw',
+    'training:lr-schedulers',
+    'training:gradient-accumulation',
+    'training:evaluation',
     'transformer',
     'tokenizer',
     'tokenizer:bpe',
@@ -55,7 +63,7 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'numerical-safety',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.4.0. */
+/** Returns the stable capabilities available in Edrion v1.5.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],
