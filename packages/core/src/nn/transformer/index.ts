@@ -14,6 +14,9 @@ export {
     normalizeTransformerConfig,
     type NormalizedTransformerConfig,
     type TransformerConfig,
+    type TransformerArchitecture,
 } from './transformer-config';
 
 export { TransformerModel } from './transformer-model';
+
+export { SwiGLUFeedForward, type SwiGLUFeedForwardOptions } from './swiglu-feed-forward';
