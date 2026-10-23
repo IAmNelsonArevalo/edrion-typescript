@@ -1,4 +1,4 @@
-/** Stable capability identifiers exposed by Edrion v1.3.0. */
+/** Stable capability identifiers exposed by Edrion v1.4.0. */
 export type EdrionCapability =
     | 'autograd'
     | 'backend:cpu'
@@ -16,6 +16,10 @@ export type EdrionCapability =
     | 'tokenizer'
     | 'tokenizer:bpe'
     | 'tokenizer:dataset'
+    | 'transformer:rope'
+    | 'transformer:rmsnorm'
+    | 'transformer:swiglu'
+    | 'transformer:modern-architecture'
     | 'training'
     | 'training:batched-data'
     | 'transformer';
@@ -40,6 +44,10 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'tokenizer',
     'tokenizer:bpe',
     'tokenizer:dataset',
+    'transformer:rope',
+    'transformer:rmsnorm',
+    'transformer:swiglu',
+    'transformer:modern-architecture',
     'generation',
     'training',
     'training:batched-data',
@@ -47,7 +55,7 @@ const STABLE_CAPABILITIES: readonly EdrionCapability[] = Object.freeze([
     'numerical-safety',
 ]);
 
-/** Returns the stable capabilities available in Edrion v1.3.0. */
+/** Returns the stable capabilities available in Edrion v1.4.0. */
 export function getEdrionCapabilities(): EdrionCapabilities {
     return {
         capabilities: [...STABLE_CAPABILITIES],

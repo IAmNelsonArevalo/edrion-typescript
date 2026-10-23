@@ -440,6 +440,98 @@ export class Tensor {
     }
 
     /**
+     * Applies rotary positional embedding (RoPE) to the last tensor dimension.
+     *
+     * Supports [sequence, features] and [batch, sequence, features] tensors.
+     */
+    public applyRotaryPositionEmbedding(rotaryDimension: number, base: number = 10_000): Tensor {
+        if (this.rank !== 2 && this.rank !== 3) {
+            throw new TensorShapeError(`RoPE expects rank 2 or rank 3 input. Received rank ${this.rank}.`);
+        }
+
+        const shape: readonly number[] = this.tensorShape;
+        const sequenceLength: number | undefined = shape[this.rank - 2];
+        const featureCount: number | undefined = shape[this.rank - 1];
+
+        if (sequenceLength === undefined || featureCount === undefined) {
+            throw new TensorShapeError('Unable to resolve RoPE tensor dimensions.');
+        }
+
+        if (
+            !Number.isInteger(rotaryDimension) ||
+            rotaryDimension <= 0 ||
+            rotaryDimension > featureCount ||
+            rotaryDimension % 2 !== 0
+        ) {
+            throw new TensorShapeError(
+                `rotaryDimension must be a positive even integer <= feature dimension ${featureCount}. Received ${rotaryDimension}.`,
+            );
+        }
+
+        if (!Number.isFinite(base) || base <= 1) {
+            throw new TensorDataError(`RoPE base must be finite and greater than 1. Received ${base}.`);
+        }
+
+        const inputData: Float32Array = this.toFloat32Array();
+        const resultData: Float32Array = new Float32Array(inputData);
+        const batchSize: number = this.rank === 3 ? (shape[0] ?? 0) : 1;
+
+        for (let batch: number = 0; batch < batchSize; batch += 1) {
+            for (let position: number = 0; position < sequenceLength; position += 1) {
+                const rowOffset: number = (batch * sequenceLength + position) * featureCount;
+
+                for (let pairStart: number = 0; pairStart < rotaryDimension; pairStart += 2) {
+                    const pairIndex: number = pairStart / 2;
+                    const inverseFrequency: number = Math.pow(base, -(2 * pairIndex) / rotaryDimension);
+                    const angle: number = position * inverseFrequency;
+                    const cosine: number = Math.cos(angle);
+                    const sine: number = Math.sin(angle);
+                    const leftIndex: number = rowOffset + pairStart;
+                    const rightIndex: number = leftIndex + 1;
+                    const leftValue: number = readArrayValue(inputData, leftIndex);
+                    const rightValue: number = readArrayValue(inputData, rightIndex);
+
+                    resultData[leftIndex] = leftValue * cosine - rightValue * sine;
+                    resultData[rightIndex] = leftValue * sine + rightValue * cosine;
+                }
+            }
+        }
+
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            if (!this.tensorRequiresGrad) {
+                return;
+            }
+
+            const inputGradient: Float32Array = new Float32Array(gradient);
+
+            for (let batch: number = 0; batch < batchSize; batch += 1) {
+                for (let position: number = 0; position < sequenceLength; position += 1) {
+                    const rowOffset: number = (batch * sequenceLength + position) * featureCount;
+
+                    for (let pairStart: number = 0; pairStart < rotaryDimension; pairStart += 2) {
+                        const pairIndex: number = pairStart / 2;
+                        const inverseFrequency: number = Math.pow(base, -(2 * pairIndex) / rotaryDimension);
+                        const angle: number = position * inverseFrequency;
+                        const cosine: number = Math.cos(angle);
+                        const sine: number = Math.sin(angle);
+                        const leftIndex: number = rowOffset + pairStart;
+                        const rightIndex: number = leftIndex + 1;
+                        const leftGradient: number = readArrayValue(gradient, leftIndex);
+                        const rightGradient: number = readArrayValue(gradient, rightIndex);
+
+                        inputGradient[leftIndex] = leftGradient * cosine + rightGradient * sine;
+                        inputGradient[rightIndex] = -leftGradient * sine + rightGradient * cosine;
+                    }
+                }
+            }
+
+            this.accumulateGradient(inputGradient);
+        };
+
+        return this.createOperationTensor(resultData, this.tensorShape, this.tensorRequiresGrad, [this], backward);
+    }
+
+    /**
      * Applies the Rectified Linear Unit activation element-wise.
      */
     public relu(): Tensor {

@@ -1,154 +1,123 @@
-# Edrion TypeScript — v1.3.0
+# Edrion TypeScript — v1.4.0
 
-Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, Transformer stack, data/training pipeline, tokenization, serialization and numerical-safety layer.
+Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, batched Transformer stack, Dataset/DataLoader pipeline, BPE tokenization, training, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v1.3.0 — FEATURE-013: Advanced Tokenization / BPE`
+`v1.4.0 — FEATURE-014: Modern Transformer Architecture`
 
-## FEATURE-013 goals
+## Modern Transformer Foundation
 
-FEATURE-013 introduces Edrion's first trainable subword tokenizer and connects text corpora directly to the Dataset/DataLoader pipeline.
-
-### BPE owned by Edrion
-
-Core now exposes:
+FEATURE-014 moves Edrion closer to the architecture required by the future Edrion LM.
 
 ```text
-BpeTokenizer
-BpeMerge
-BpeTrainingStats
-TokenizedTextDataset
+Token IDs
+   ↓
+Token Embedding
+   ↓
+Modern Transformer Blocks × N
+   ├─ RMSNorm
+   ├─ Multi-Head Attention
+   │    └─ RoPE on Q/K
+   ├─ Residual
+   ├─ RMSNorm
+   ├─ SwiGLU
+   └─ Residual
+   ↓
+Final RMSNorm
+   ↓
+Language Model Head
+   ↓
+Vocabulary Logits
 ```
 
-Unlike the original `BasicTokenizer`, BPE learns its vocabulary from the corpus:
+### RoPE
+
+Modern attention uses Rotary Position Embeddings instead of learned absolute positional embeddings. Edrion's RoPE implementation is differentiable and supports both:
 
 ```text
-Corpus
-  ↓
-Unicode alphabet
-  ↓
-Pair frequencies
-  ↓
-Repeated BPE merges
-  ↓
-Subword vocabulary
+[sequence, headDimension]
+[batch, sequence, headDimension]
 ```
 
-Example:
+### RMSNorm
 
-```ts
-const tokenizer = new BpeTokenizer({
-    targetVocabularySize: 8192,
-    minimumPairFrequency: 2,
-    lowercase: true,
-});
+Modern blocks replace LayerNorm with RMSNorm, using a trainable scaling parameter and normalization over the final feature dimension.
 
-tokenizer.fit(corpus);
-```
+### SwiGLU
 
-### Deterministic training
-
-The same corpus and configuration produce the same merge order and vocabulary. Pair-frequency ties use a deterministic lexical rule.
-
-### Unicode and exact normalized decode
-
-FEATURE-013 operates on Unicode code points and keeps whitespace and punctuation in the symbol stream. This allows encoded text to decode back to the same normalized text without the heuristic spacing rules used by `BasicTokenizer`.
-
-### Dataset integration
-
-Tokenizer training can consume:
+The modern feed-forward path is:
 
 ```text
-Dataset<string>
+gate = SiLU(Wgate(x))
+up   = Wup(x)
+out  = Wdown(gate * up)
 ```
-
-through:
-
-```ts
-tokenizer.fitDataset(dataset);
-```
-
-and text datasets can be adapted lazily:
-
-```text
-Dataset<string>
-      ↓
-TokenizedTextDataset
-      ↓
-Dataset<readonly number[]>
-```
-
-This prepares Edrion for language-model corpus preprocessing without introducing filesystem or Node dependencies into `@edrion/core`.
-
-### Persistence
-
-BPE state includes:
-
-```text
-configuration
-vocabulary
-ordered merge table
-```
-
-and can be serialized/restored for training and inference.
 
 ### Compatibility
 
-`BasicTokenizer` remains available. `BpeTokenizer` implements the existing `Tokenizer` interface, so the generation engine can consume it directly.
+For v1.x backward compatibility, `TransformerModel` keeps the legacy default. Enable the new architecture explicitly with:
 
-## Production capabilities
-
-v1.3.0 adds:
-
-```text
-tokenizer:bpe
-tokenizer:dataset
+```ts
+architecture: 'modern';
 ```
 
-while preserving all v1.2.0 data and batched-training capabilities.
+The previous path remains available as:
+
+```ts
+architecture: 'legacy';
+```
+
+## Production capabilities added in v1.4.0
+
+```text
+transformer:rope
+transformer:rmsnorm
+transformer:swiglu
+transformer:modern-architecture
+```
 
 ## Validation
 
-FEATURE-013 passed:
-
 ```text
 Core strict TypeScript typecheck    PASS
-BPE runtime training                PASS
-Unicode round-trip                  PASS
-Serialization round-trip            PASS
-Dataset integration                 PASS
-Deterministic training              PASS
+RoPE forward/backward               PASS
+Batched RoPE                        PASS
+RMSNorm                             PASS
+SwiGLU                              PASS
+Modern batched Transformer          PASS
+Full Transformer backward           PASS
+Legacy compatibility                PASS
 ```
 
 See:
 
 ```text
-FEATURE-013.md
-FEATURE-013-VALIDATION.md
-PR-FEATURE-013.md
+FEATURE-014.md
+FEATURE-014-VALIDATION.md
+PR-FEATURE-014.md
 ```
 
 ## Packages
 
 ```text
-@edrion/core        1.3.0
-@edrion/nestjs      1.3.0
-edrion-typescript   1.3.0
-@edrion/nest-lab    1.3.0
+@edrion/core        1.4.0
+@edrion/nestjs      1.4.0
+edrion-typescript   1.4.0
+@edrion/nest-lab    1.4.0
 ```
 
 ## Branch
 
 ```bash
-git switch -c EDR-TS/feature/013-bpe-tokenizer
+git switch -c EDR-TS/feature/014-modern-transformer
 ```
 
 ## Commit
 
 ```bash
 git add .
-git commit -m "feat(EDR-TS-013): add BPE tokenizer and dataset tokenization"
+git commit -m "feat(EDR-TS-014): modernize transformer architecture"
 ```
 
 ## Quality Gate
@@ -166,8 +135,8 @@ pnpm check
 | v1.1.0  | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅      |
 | v1.2.0  | FEATURE-012 — Dataset + DataLoader             | ✅      |
 | v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | ✅      |
-| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | Next    |
-| v1.5.0  | FEATURE-015 — Advanced Training Engine         | Planned |
+| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | ✅      |
+| v1.5.0  | FEATURE-015 — Advanced Training Engine         | Next    |
 | v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | Planned |
 | v1.7.0  | FEATURE-017 — WebGPU Backend                   | Planned |
 | v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
