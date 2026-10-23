@@ -34,6 +34,6 @@ describe('BackendRegistry', (): void => {
         const registry: BackendRegistry = createDefaultBackendRegistry();
 
         expect(registry.has('cpu')).toBe(true);
-        expect(registry.getRegisteredBackends()).toEqual(['cpu']);
+        expect(registry.getRegisteredBackends()).toEqual(['cpu', 'webgpu']);
     });
 });

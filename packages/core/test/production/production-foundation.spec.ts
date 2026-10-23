@@ -13,8 +13,8 @@ describe('Production Foundation', (): void => {
     it('should expose stable release information', (): void => {
         const release: EdrionReleaseInfo = getEdrionReleaseInfo();
 
-        expect(EDRION_VERSION).toBe('1.6.0');
-        expect(release.version).toBe('1.6.0');
+        expect(EDRION_VERSION).toBe('1.7.0');
+        expect(release.version).toBe('1.7.0');
         expect(release.channel).toBe('stable');
         expect(release.apiStability).toBe('stable');
     });
