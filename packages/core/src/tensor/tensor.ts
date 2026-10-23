@@ -493,9 +493,7 @@ export class Tensor {
      */
     public transpose(): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
-            throw new TensorShapeError(
-                `transpose() requires a rank-2 or rank-3 tensor. Received rank ${this.rank}.`,
-            );
+            throw new TensorShapeError(`transpose() requires a rank-2 or rank-3 tensor. Received rank ${this.rank}.`);
         }
 
         if (this.rank === 2) {
@@ -646,14 +644,7 @@ export class Tensor {
                 if (right.tensorRequiresGrad) {
                     const leftTranspose: Float32Array = transposeMatrix(leftMatrix, leftRows, leftColumns);
                     rightGradient.set(
-                        matmulOperation(
-                            leftTranspose,
-                            leftColumns,
-                            leftRows,
-                            gradientMatrix,
-                            leftRows,
-                            rightColumns,
-                        ),
+                        matmulOperation(leftTranspose, leftColumns, leftRows, gradientMatrix, leftRows, rightColumns),
                         rightOffset,
                     );
                 }
@@ -697,39 +688,19 @@ export class Tensor {
             if (this.tensorRequiresGrad) {
                 const rightTranspose: Float32Array = transposeMatrix(rightData, rightRows, rightColumns);
                 this.accumulateGradient(
-                    matmulOperation(
-                        gradient,
-                        leftRows,
-                        rightColumns,
-                        rightTranspose,
-                        rightColumns,
-                        rightRows,
-                    ),
+                    matmulOperation(gradient, leftRows, rightColumns, rightTranspose, rightColumns, rightRows),
                 );
             }
 
             if (right.tensorRequiresGrad) {
                 const leftTranspose: Float32Array = transposeMatrix(leftData, leftRows, leftColumns);
                 right.accumulateGradient(
-                    matmulOperation(
-                        leftTranspose,
-                        leftColumns,
-                        leftRows,
-                        gradient,
-                        leftRows,
-                        rightColumns,
-                    ),
+                    matmulOperation(leftTranspose, leftColumns, leftRows, gradient, leftRows, rightColumns),
                 );
             }
         };
 
-        return this.createOperationTensor(
-            resultData,
-            [leftRows, rightColumns],
-            requiresGrad,
-            [this, right],
-            backward,
-        );
+        return this.createOperationTensor(resultData, [leftRows, rightColumns], requiresGrad, [this, right], backward);
     }
 
     /**
@@ -738,9 +709,7 @@ export class Tensor {
      */
     public sliceColumns(startColumn: number, endColumn: number): Tensor {
         if (this.rank !== 2 && this.rank !== 3) {
-            throw new TensorShapeError(
-                `sliceColumns() requires rank-2 or rank-3 input. Received rank ${this.rank}.`,
-            );
+            throw new TensorShapeError(`sliceColumns() requires rank-2 or rank-3 input. Received rank ${this.rank}.`);
         }
 
         const columns: number = readShapeDimension(this.tensorShape, this.rank - 1);
@@ -901,9 +870,66 @@ export class Tensor {
             }
         };
 
+        return first.createOperationTensor(result, [...leadingShape, totalColumns], requiresGrad, tensors, backward);
+    }
+
+    /**
+     * Stacks equally-shaped tensors along a new leading dimension.
+     *
+     * Example: two [sequence] tensors become [batch, sequence].
+     */
+    public static stack(tensors: readonly Tensor[]): Tensor {
+        if (tensors.length === 0) {
+            throw new TensorShapeError('stack() requires at least one tensor.');
+        }
+
+        const first: Tensor | undefined = tensors[0];
+
+        if (first === undefined) {
+            throw new TensorShapeError('stack() could not resolve the first tensor.');
+        }
+
+        const sampleSize: number = first.tensorSize;
+        const result: Float32Array = new Float32Array(sampleSize * tensors.length);
+        let requiresGrad: boolean = false;
+
+        for (let index: number = 0; index < tensors.length; index += 1) {
+            const tensor: Tensor | undefined = tensors[index];
+
+            if (tensor === undefined) {
+                throw new TensorShapeError(`stack() tensor at index ${index} does not exist.`);
+            }
+
+            first.assertCompatibleTensor(tensor);
+
+            if (!tensorShapesEqual(first.tensorShape, tensor.tensorShape)) {
+                throw new TensorShapeError(
+                    `stack() requires equal tensor shapes. Expected [${first.tensorShape.join(', ')}] but tensor ${index} has [${tensor.tensorShape.join(', ')}].`,
+                );
+            }
+
+            result.set(tensor.toFloat32Array(), index * sampleSize);
+            requiresGrad = requiresGrad || tensor.tensorRequiresGrad;
+        }
+
+        const backward: BackwardFunction = (gradient: Float32Array): void => {
+            for (let index: number = 0; index < tensors.length; index += 1) {
+                const tensor: Tensor | undefined = tensors[index];
+
+                if (tensor === undefined) {
+                    throw new AutogradError(`stack() missing autograd tensor at index ${index}.`);
+                }
+
+                if (tensor.tensorRequiresGrad) {
+                    const start: number = index * sampleSize;
+                    tensor.accumulateGradient(gradient.slice(start, start + sampleSize));
+                }
+            }
+        };
+
         return first.createOperationTensor(
             result,
-            [...leadingShape, totalColumns],
+            [tensors.length, ...first.tensorShape],
             requiresGrad,
             tensors,
             backward,

@@ -134,16 +134,16 @@ pnpm check
 
 ## Roadmap
 
-| Version | Feature | Status |
-| --- | --- | --- |
-| v1.0.0 | FEATURE-010 — Production Foundation | ✅ |
-| v1.1.0 | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅ |
-| v1.2.0 | FEATURE-012 — Dataset + DataLoader | Next |
-| v1.3.0 | FEATURE-013 — Advanced Tokenization / BPE | Planned |
-| v1.4.0 | FEATURE-014 — Modern Transformer Architecture | Planned |
-| v1.5.0 | FEATURE-015 — Advanced Training Engine | Planned |
-| v1.6.0 | FEATURE-016 — KV Cache + Streaming Generation | Planned |
-| v1.7.0 | FEATURE-017 — WebGPU Backend | Planned |
-| v1.8.0 | FEATURE-018 — Mixed Precision | Planned |
-| v1.9.0 | FEATURE-019 — Large Model Infrastructure | Planned |
-| v2.0.0 | Edrion Language Model Foundation | Planned |
+| Version | Feature                                        | Status  |
+| ------- | ---------------------------------------------- | ------- |
+| v1.0.0  | FEATURE-010 — Production Foundation            | ✅      |
+| v1.1.0  | FEATURE-011 — QA Fixes + Batched Tensor Engine | ✅      |
+| v1.2.0  | FEATURE-012 — Dataset + DataLoader             | Next    |
+| v1.3.0  | FEATURE-013 — Advanced Tokenization / BPE      | Planned |
+| v1.4.0  | FEATURE-014 — Modern Transformer Architecture  | Planned |
+| v1.5.0  | FEATURE-015 — Advanced Training Engine         | Planned |
+| v1.6.0  | FEATURE-016 — KV Cache + Streaming Generation  | Planned |
+| v1.7.0  | FEATURE-017 — WebGPU Backend                   | Planned |
+| v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
+| v1.9.0  | FEATURE-019 — Large Model Infrastructure       | Planned |
+| v2.0.0  | Edrion Language Model Foundation               | Planned |

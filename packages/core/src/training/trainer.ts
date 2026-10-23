@@ -1,14 +1,15 @@
+import { ArrayDataset, DataLoader, type DataBatch, type Dataset } from '@core/data';
 import type { Loss } from '@core/losses/loss';
 import type { Module } from '@core/nn/module';
 import type { Optimizer } from '@core/optim/optimizer';
-import type { Tensor } from '@core/tensor/tensor';
+import { Tensor } from '@core/tensor/tensor';
 import {
     normalizeTrainingConfig,
     type NormalizedTrainingConfig,
     type TrainingConfig,
 } from '@core/training/training-config';
 import { TrainingDataError } from '@core/training/training.errors';
-import type { EpochMetrics, TrainingResult } from '@core/training/training-metrics';
+import type { BatchMetrics, EpochMetrics, TrainingResult } from '@core/training/training-metrics';
 import type { TrainingState } from '@core/training/training-state';
 
 /** One supervised training example. */
@@ -17,16 +18,20 @@ export interface TrainingSample {
     readonly target: Tensor;
 }
 
+/** Dataset forms accepted by Trainer. */
+export type TrainingDataSource = readonly TrainingSample[] | Dataset<TrainingSample> | DataLoader<TrainingSample>;
+
 /** Optional callbacks emitted during training. */
 export interface TrainerCallbacks {
+    readonly onBatchEnd?: (metrics: BatchMetrics) => void;
     readonly onEpochEnd?: (metrics: EpochMetrics) => void;
 }
 
 /**
  * Generic supervised trainer built on Edrion Module, Loss and Optimizer.
  *
- * Gradient accumulation is used to support logical batch sizes while the
- * current Transformer foundation still processes one sequence at a time.
+ * FEATURE-012 executes real tensor batches through Tensor.stack() and DataLoader
+ * instead of simulating batches exclusively through gradient accumulation.
  */
 export class Trainer {
     private readonly config: NormalizedTrainingConfig;
@@ -72,9 +77,17 @@ export class Trainer {
     }
 
     /** Executes configured training epochs. */
-    public train(dataset: readonly TrainingSample[], callbacks: TrainerCallbacks = {}): TrainingResult {
-        if (dataset.length === 0) {
+    public train(source: TrainingDataSource, callbacks: TrainerCallbacks = {}): TrainingResult {
+        const loader: DataLoader<TrainingSample> = this.resolveDataLoader(source);
+
+        if (loader.dataset.length === 0) {
             throw new TrainingDataError('Training dataset cannot be empty.');
+        }
+
+        if (loader.batchCount === 0) {
+            throw new TrainingDataError(
+                'Training DataLoader does not emit any batches. Disable dropLast or reduce batchSize.',
+            );
         }
 
         this.model.train();
@@ -84,7 +97,7 @@ export class Trainer {
 
         for (let epochOffset: number = 0; epochOffset < this.config.epochs; epochOffset += 1) {
             const epochNumber: number = this.stateInternal.epoch + 1;
-            const metrics: EpochMetrics = this.trainEpoch(dataset, epochNumber);
+            const metrics: EpochMetrics = this.trainEpoch(loader, epochNumber, callbacks);
 
             this.stateInternal = {
                 epoch: epochNumber,
@@ -109,58 +122,105 @@ export class Trainer {
         };
     }
 
-    private trainEpoch(dataset: readonly TrainingSample[], epochNumber: number): EpochMetrics {
+    private trainEpoch(
+        loader: DataLoader<TrainingSample>,
+        epochNumber: number,
+        callbacks: TrainerCallbacks,
+    ): EpochMetrics {
         const startedAt: number = Date.now();
-        let totalLoss: number = 0;
+        let weightedLoss: number = 0;
+        let processedSamples: number = 0;
         let batchCount: number = 0;
-        let batchStart: number = 0;
 
-        while (batchStart < dataset.length) {
-            const batchEnd: number = Math.min(batchStart + this.config.batchSize, dataset.length);
-            const batchLength: number = batchEnd - batchStart;
+        for (const batch of loader.batches(epochNumber - 1)) {
+            const batchMetrics: BatchMetrics = this.trainBatch(batch, epochNumber);
 
-            this.optimizer.zeroGrad();
-
-            for (let sampleIndex: number = batchStart; sampleIndex < batchEnd; sampleIndex += 1) {
-                const sample: TrainingSample | undefined = dataset[sampleIndex];
-
-                if (sample === undefined) {
-                    throw new TrainingDataError(`Missing training sample at index ${sampleIndex}.`);
-                }
-
-                const prediction: Tensor = this.model.forward(sample.input);
-                const sampleLoss: Tensor = this.loss.forward(prediction, sample.target);
-                const scalarLoss: number = sampleLoss.get();
-
-                if (!Number.isFinite(scalarLoss)) {
-                    throw new TrainingDataError(
-                        `Training loss is not finite at sample ${sampleIndex}. Received ${scalarLoss}.`,
-                    );
-                }
-
-                totalLoss += scalarLoss;
-
-                const normalizedLoss: Tensor = sampleLoss.div(batchLength);
-                normalizedLoss.backward();
-            }
-
-            this.optimizer.step();
+            weightedLoss += batchMetrics.loss * batchMetrics.samples;
+            processedSamples += batchMetrics.samples;
             batchCount += 1;
-            this.stateInternal = {
-                epoch: this.stateInternal.epoch,
-                globalStep: this.stateInternal.globalStep + 1,
-                completed: false,
-            };
+            callbacks.onBatchEnd?.(batchMetrics);
+        }
 
-            batchStart = batchEnd;
+        if (processedSamples === 0) {
+            throw new TrainingDataError(`Epoch ${epochNumber} did not process any samples.`);
         }
 
         return {
             epoch: epochNumber,
-            samples: dataset.length,
+            samples: processedSamples,
             batches: batchCount,
-            averageLoss: totalLoss / dataset.length,
+            averageLoss: weightedLoss / processedSamples,
             durationMs: Math.max(0, Date.now() - startedAt),
         };
+    }
+
+    private trainBatch(batch: DataBatch<TrainingSample>, epochNumber: number): BatchMetrics {
+        if (batch.samples.length === 0) {
+            throw new TrainingDataError(`Training batch ${batch.batchIndex} cannot be empty.`);
+        }
+
+        const startedAt: number = Date.now();
+        const inputs: Tensor[] = new Array<Tensor>(batch.samples.length);
+        const targets: Tensor[] = new Array<Tensor>(batch.samples.length);
+
+        for (let index: number = 0; index < batch.samples.length; index += 1) {
+            const sample: TrainingSample | undefined = batch.samples[index];
+
+            if (sample === undefined) {
+                throw new TrainingDataError(`Missing training sample at batch offset ${index}.`);
+            }
+
+            inputs[index] = sample.input;
+            targets[index] = sample.target;
+        }
+
+        const batchInput: Tensor = Tensor.stack(inputs);
+        const batchTarget: Tensor = Tensor.stack(targets);
+
+        this.optimizer.zeroGrad();
+
+        const prediction: Tensor = this.model.forward(batchInput);
+        const batchLoss: Tensor = this.loss.forward(prediction, batchTarget);
+        const scalarLoss: number = batchLoss.get();
+
+        if (!Number.isFinite(scalarLoss)) {
+            throw new TrainingDataError(
+                `Training loss is not finite at epoch ${epochNumber}, batch ${batch.batchIndex}. Received ${scalarLoss}.`,
+            );
+        }
+
+        batchLoss.backward();
+        this.optimizer.step();
+
+        this.stateInternal = {
+            epoch: this.stateInternal.epoch,
+            globalStep: this.stateInternal.globalStep + 1,
+            completed: false,
+        };
+
+        return {
+            epoch: epochNumber,
+            batch: batch.batchIndex,
+            samples: batch.samples.length,
+            loss: scalarLoss,
+            durationMs: Math.max(0, Date.now() - startedAt),
+        };
+    }
+
+    private resolveDataLoader(source: TrainingDataSource): DataLoader<TrainingSample> {
+        if (source instanceof DataLoader) {
+            return source;
+        }
+
+        const dataset: Dataset<TrainingSample> = Array.isArray(source)
+            ? new ArrayDataset(source)
+            : (source as Dataset<TrainingSample>);
+
+        return new DataLoader(dataset, {
+            batchSize: this.config.batchSize,
+            shuffle: this.config.shuffle,
+            dropLast: this.config.dropLast,
+            seed: this.config.seed,
+        });
     }
 }
