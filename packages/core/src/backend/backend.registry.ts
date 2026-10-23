@@ -1,5 +1,6 @@
 import type { EdrionBackend } from '@core/backend/backend.interface';
 import { CPUBackend } from '@core/backend/cpu/cpu.backend';
+import { WebGPUBackend } from '@core/backend/webgpu/webgpu.backend';
 
 /** Factory capable of creating an Edrion backend. */
 export type EdrionBackendFactory = () => EdrionBackend;
@@ -51,6 +52,7 @@ export function createDefaultBackendRegistry(): BackendRegistry {
     const registry: BackendRegistry = new BackendRegistry();
 
     registry.register('cpu', (): EdrionBackend => new CPUBackend());
+    registry.register('webgpu', (): EdrionBackend => new WebGPUBackend());
 
     return registry;
 }
