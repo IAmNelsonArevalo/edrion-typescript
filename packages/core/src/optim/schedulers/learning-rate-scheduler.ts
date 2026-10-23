@@ -21,9 +21,7 @@ export abstract class LearningRateScheduler {
         }
         const learningRate: number = this.getLearningRate(step);
         if (!Number.isFinite(learningRate) || learningRate <= 0) {
-            throw new OptimizerConfigurationError(
-                `Scheduler produced invalid learning rate ${learningRate} at step ${step}.`,
-            );
+            throw new OptimizerConfigurationError(`Scheduler produced invalid learning rate ${learningRate} at step ${step}.`);
         }
         this.optimizer.setLearningRate(learningRate);
         this.lastLearningRateInternal = learningRate;

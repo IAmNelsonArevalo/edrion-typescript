@@ -66,9 +66,7 @@ export function normalizeTransformerConfig(config: TransformerConfig): Normalize
     const rotaryDimension: number = config.rotaryDimension ?? headDimension;
 
     if (!Number.isFinite(rotaryBase) || rotaryBase <= 1) {
-        throw new TransformerConfigurationError(
-            `rotaryBase must be finite and greater than 1. Received ${rotaryBase}.`,
-        );
+        throw new TransformerConfigurationError(`rotaryBase must be finite and greater than 1. Received ${rotaryBase}.`);
     }
 
     if (

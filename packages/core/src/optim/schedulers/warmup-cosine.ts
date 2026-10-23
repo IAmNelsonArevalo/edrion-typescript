@@ -19,28 +19,18 @@ export class WarmupCosineScheduler extends LearningRateScheduler {
     public constructor(optimizer: Optimizer, options: WarmupCosineOptions) {
         super(optimizer);
         if (!Number.isInteger(options.warmupSteps) || options.warmupSteps <= 0) {
-            throw new OptimizerConfigurationError(
-                `warmupSteps must be a positive integer. Received ${options.warmupSteps}.`,
-            );
+            throw new OptimizerConfigurationError(`warmupSteps must be a positive integer. Received ${options.warmupSteps}.`);
         }
         if (!Number.isInteger(options.totalSteps) || options.totalSteps <= options.warmupSteps) {
-            throw new OptimizerConfigurationError(
-                `totalSteps must be an integer greater than warmupSteps. Received ${options.totalSteps}.`,
-            );
+            throw new OptimizerConfigurationError(`totalSteps must be an integer greater than warmupSteps. Received ${options.totalSteps}.`);
         }
         const startFactor: number = options.startFactor ?? 0.1;
         const minimumLearningRate: number = options.minimumLearningRate ?? this.baseLearningRate * 0.01;
         if (!Number.isFinite(startFactor) || startFactor <= 0 || startFactor > 1) {
             throw new OptimizerConfigurationError(`startFactor must be in (0, 1]. Received ${startFactor}.`);
         }
-        if (
-            !Number.isFinite(minimumLearningRate) ||
-            minimumLearningRate <= 0 ||
-            minimumLearningRate > this.baseLearningRate
-        ) {
-            throw new OptimizerConfigurationError(
-                `minimumLearningRate must be in (0, baseLearningRate]. Received ${minimumLearningRate}.`,
-            );
+        if (!Number.isFinite(minimumLearningRate) || minimumLearningRate <= 0 || minimumLearningRate > this.baseLearningRate) {
+            throw new OptimizerConfigurationError(`minimumLearningRate must be in (0, baseLearningRate]. Received ${minimumLearningRate}.`);
         }
         this.warmupSteps = options.warmupSteps;
         this.totalSteps = options.totalSteps;

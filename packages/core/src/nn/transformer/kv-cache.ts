@@ -102,8 +102,9 @@ export function concatenateCachedSequence(previous: Tensor | undefined, current:
     }
 
     const outputSequence: number = previousSequence + currentSequence;
-    const outputShape: number[] =
-        current.rank === 3 ? [batchSize, outputSequence, currentFeatures] : [outputSequence, currentFeatures];
+    const outputShape: number[] = current.rank === 3
+        ? [batchSize, outputSequence, currentFeatures]
+        : [outputSequence, currentFeatures];
     const output: Float32Array = new Float32Array(batchSize * outputSequence * currentFeatures);
     const previousData: Float32Array = previous.toFloat32Array();
     const currentData: Float32Array = current.toFloat32Array();

@@ -382,7 +382,7 @@ function compareStrings(left: string, right: string): number {
 function applyMerge(symbols: readonly string[], merge: BpeMerge): string[] {
     const output: string[] = [];
 
-    for (let index: number = 0; index < symbols.length;) {
+    for (let index: number = 0; index < symbols.length; ) {
         const current: string | undefined = symbols[index];
         if (current === undefined) {
             throw new TokenizerError(`BPE symbol at index ${index} does not exist.`);
@@ -440,10 +440,6 @@ function isBpeTokenizerState(value: unknown): value is BpeTokenizerState {
             return false;
         }
         const record: Record<string, unknown> = merge as Record<string, unknown>;
-        return (
-            typeof record['left'] === 'string' &&
-            typeof record['right'] === 'string' &&
-            typeof record['token'] === 'string'
-        );
+        return typeof record['left'] === 'string' && typeof record['right'] === 'string' && typeof record['token'] === 'string';
     });
 }

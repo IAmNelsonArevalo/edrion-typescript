@@ -20,18 +20,12 @@ describe('advanced trainer', () => {
             { input: new Tensor([3], [1]), target: new Tensor([7], [1]) },
             { input: new Tensor([4], [1]), target: new Tensor([9], [1]) },
         ];
-        const trainer: Trainer = new Trainer(
-            model,
-            optimizer,
-            new MSELoss(),
-            {
-                epochs: 1,
-                batchSize: 1,
-                gradientAccumulationSteps: 2,
-                maxGradientNorm: 10,
-            },
-            { scheduler, validationData: samples },
-        );
+        const trainer: Trainer = new Trainer(model, optimizer, new MSELoss(), {
+            epochs: 1,
+            batchSize: 1,
+            gradientAccumulationSteps: 2,
+            maxGradientNorm: 10,
+        }, { scheduler, validationData: samples });
         const result = trainer.train(samples);
         expect(result.epochs[0]?.optimizerSteps).toBe(2);
         expect(result.finalValidationLoss).toBeTypeOf('number');

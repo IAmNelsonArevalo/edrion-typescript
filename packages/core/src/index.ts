@@ -15,6 +15,7 @@ export {
 } from './config/edrion-options';
 
 export * from './losses';
+export * from './large-model';
 export * from './metrics';
 export * from './nn';
 export * from './optim';

@@ -4,9 +4,4 @@ export { GreedySampler } from './greedy-sampler';
 export { TemperatureSampler } from './temperature-sampler';
 export { TopKSampler } from './top-k-sampler';
 export type { RandomSource, Sampler } from './sampler';
-export {
-    TextGenerator,
-    type GenerationMetrics,
-    type GenerationResult,
-    type GenerationTokenEvent,
-} from './text-generator';
+export { TextGenerator, type GenerationMetrics, type GenerationResult, type GenerationTokenEvent } from './text-generator';

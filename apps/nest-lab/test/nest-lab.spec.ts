@@ -20,10 +20,11 @@ describe('NestJS consumer integration', (): void => {
 
         expect(edrion.isReady()).toBe(true);
         expect(edrion.getVersion()).toBe('1.3.0');
+        expect(edrion.getHealthReport().status).toBe('ready');
 
         await application.close();
         application = undefined;
 
-        expect(edrion.getStatus().state).toBe('stopped');
+        expect(edrion.getStatus()).toBe('stopped');
     });
 });

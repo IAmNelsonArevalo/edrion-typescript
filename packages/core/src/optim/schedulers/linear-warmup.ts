@@ -15,9 +15,7 @@ export class LinearWarmupScheduler extends LearningRateScheduler {
     public constructor(optimizer: Optimizer, options: LinearWarmupOptions) {
         super(optimizer);
         if (!Number.isInteger(options.warmupSteps) || options.warmupSteps <= 0) {
-            throw new OptimizerConfigurationError(
-                `warmupSteps must be a positive integer. Received ${options.warmupSteps}.`,
-            );
+            throw new OptimizerConfigurationError(`warmupSteps must be a positive integer. Received ${options.warmupSteps}.`);
         }
         const startFactor: number = options.startFactor ?? 0.1;
         if (!Number.isFinite(startFactor) || startFactor <= 0 || startFactor > 1) {

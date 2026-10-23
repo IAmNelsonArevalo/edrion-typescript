@@ -58,8 +58,6 @@ export function assertDatasetIndex(index: number, length: number): void {
     }
 
     if (index < 0 || index >= length) {
-        throw new DatasetIndexError(
-            `Dataset index ${index} is outside the valid range [0, ${Math.max(0, length - 1)}].`,
-        );
+        throw new DatasetIndexError(`Dataset index ${index} is outside the valid range [0, ${Math.max(0, length - 1)}].`);
     }
 }

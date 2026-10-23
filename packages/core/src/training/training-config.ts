@@ -37,9 +37,7 @@ export function normalizeTrainingConfig(config: TrainingConfig): NormalizedTrain
     assertPositiveInteger(gradientAccumulationSteps, 'Training gradientAccumulationSteps');
     const maxGradientNorm: number | undefined = config.maxGradientNorm;
     if (maxGradientNorm !== undefined && (!Number.isFinite(maxGradientNorm) || maxGradientNorm <= 0)) {
-        throw new TrainingConfigError(
-            `Training maxGradientNorm must be a finite number greater than zero. Received ${maxGradientNorm}.`,
-        );
+        throw new TrainingConfigError(`Training maxGradientNorm must be a finite number greater than zero. Received ${maxGradientNorm}.`);
     }
     return {
         epochs: config.epochs,
