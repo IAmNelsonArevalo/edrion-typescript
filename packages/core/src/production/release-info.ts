@@ -1,5 +1,5 @@
 /** Stable Edrion framework version exposed by the public API. */
-export const EDRION_VERSION: string = '1.4.0';
+export const EDRION_VERSION: string = '1.5.0';
 
 /** Release channel used by this build. */
 export type EdrionReleaseChannel = 'stable';

@@ -24,7 +24,6 @@ interface AdamParameterState {
  * Adam optimizer with bias-corrected first and second moments.
  */
 export class Adam extends Optimizer {
-    public readonly learningRate: number;
     public readonly beta1: number;
     public readonly beta2: number;
     public readonly epsilon: number;
@@ -34,7 +33,7 @@ export class Adam extends Optimizer {
     private stepCount: number = 0;
 
     public constructor(parameters: readonly Parameter[], options: AdamOptions) {
-        super(parameters);
+        super(parameters, options.learningRate);
 
         assertPositiveFinite(options.learningRate, 'Adam learningRate');
 
@@ -46,7 +45,6 @@ export class Adam extends Optimizer {
         assertUnitIntervalExclusiveOne(beta2, 'Adam beta2');
         assertPositiveFinite(epsilon, 'Adam epsilon');
 
-        this.learningRate = options.learningRate;
         this.beta1 = beta1;
         this.beta2 = beta2;
         this.epsilon = epsilon;

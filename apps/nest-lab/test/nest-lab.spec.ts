@@ -19,7 +19,7 @@ describe('NestJS consumer integration', (): void => {
         const edrion: EdrionService = application.get(EdrionService);
 
         expect(edrion.isReady()).toBe(true);
-        expect(edrion.getVersion()).toBe('1.4.0');
+        expect(edrion.getVersion()).toBe('1.5.0');
 
         await application.close();
         application = undefined;

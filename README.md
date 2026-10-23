@@ -1,10 +1,24 @@
-# Edrion TypeScript — v1.4.0
+# Edrion TypeScript — v1.5.0
 
 Edrion is a TypeScript-first deep-learning framework with its own Tensor engine, Autograd, neural-network modules, batched Transformer stack, Dataset/DataLoader pipeline, BPE tokenization, training, serialization and numerical-safety layer.
 
 ## Current Version
 
-`v1.4.0 — FEATURE-014: Modern Transformer Architecture`
+`v1.5.0 — FEATURE-015: Advanced Training Engine`
+
+## Advanced Training Engine
+
+FEATURE-015 adds the optimization and evaluation primitives required for serious language-model pretraining:
+
+- AdamW with decoupled weight decay
+- runtime-adjustable learning rates
+- linear warmup, cosine decay, and warmup + cosine schedules
+- gradient accumulation across real tensor batches
+- optional global-norm gradient clipping
+- validation/evaluation loops
+- training, validation, learning-rate, and gradient-norm metrics
+
+The existing Transformer, BPE tokenizer, Dataset/DataLoader and serialization stack remain available unchanged.
 
 ## Modern Transformer Foundation
 
@@ -142,3 +156,23 @@ pnpm check
 | v1.8.0  | FEATURE-018 — Mixed Precision                  | Planned |
 | v1.9.0  | FEATURE-019 — Large Model Infrastructure       | Planned |
 | v2.0.0  | Edrion Language Model Foundation               | Planned |
+
+# Edrion Nest Lab
+
+Executable NestJS consumer used by Edrion's integration QA.
+
+It validates that `@edrion/nestjs` works outside its own package boundary, including dependency injection, module lifecycle, runtime initialization, health reporting and shutdown.
+
+```bash
+pnpm --filter @edrion/nest-lab test
+pnpm --filter @edrion/nest-lab build
+```
+
+## Production capabilities added in v1.5.0
+
+```text
+optimizers:adamw
+training:lr-schedulers
+training:gradient-accumulation
+training:evaluation
+```
